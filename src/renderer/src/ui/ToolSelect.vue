@@ -3,14 +3,14 @@
 import { ref, computed, useAttrs, onBeforeUnmount, nextTick } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 
-interface InkOpt {
+interface ToolOpt {
   label: string
   value: string | number
 }
 
 const props = defineProps<{
   modelValue: string | number
-  options: InkOpt[]
+  options: ToolOpt[]
   disabled?: boolean
   placeholder?: string
 }>()
@@ -103,7 +103,7 @@ function onOutside(e: PointerEvent): void {
   close()
 }
 
-function pick(o: InkOpt): void {
+function pick(o: ToolOpt): void {
   emit('update:modelValue', o.value)
   emit('change')
   close()
@@ -150,7 +150,7 @@ onBeforeUnmount(close)
   <button
     ref="triggerRef"
     type="button"
-    class="ink-select-trigger"
+    class="tool-select-trigger"
     :class="[{ 'is-open': open, 'is-disabled': disabled }, String(attrs.class || '')]"
     :style="typeof attrs.style === 'object' ? attrs.style : undefined"
     :disabled="disabled"
@@ -163,13 +163,13 @@ onBeforeUnmount(close)
     <ChevronDown :size="14" class="shrink-0 opacity-60 transition-transform duration-200" :class="open ? 'rotate-180' : ''" />
   </button>
   <Teleport to="body">
-    <Transition name="ink-sel">
-      <div v-if="open" ref="panelRef" class="ink-select-panel" :style="panelStyle" role="listbox">
+    <Transition name="tool-sel">
+      <div v-if="open" ref="panelRef" class="tool-select-panel" :style="panelStyle" role="listbox">
         <button
           v-for="(o, i) in options"
           :key="String(o.value)"
           type="button"
-          class="ink-select-item"
+          class="tool-select-item"
           :class="{ 'is-active': i === active, 'is-selected': String(o.value) === String(modelValue) }"
           role="option"
           :aria-selected="String(o.value) === String(modelValue)"
@@ -185,7 +185,7 @@ onBeforeUnmount(close)
 </template>
 
 <style scoped>
-.ink-select-trigger {
+.tool-select-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -201,19 +201,19 @@ onBeforeUnmount(close)
   outline: none;
   transition: border-color 0.2s;
 }
-.ink-select-trigger:hover,
-.ink-select-trigger.is-open {
+.tool-select-trigger:hover,
+.tool-select-trigger.is-open {
   border-color: var(--accent);
 }
-.ink-select-trigger.is-disabled {
+.tool-select-trigger.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.ink-select-trigger .is-placeholder {
+.tool-select-trigger .is-placeholder {
   color: var(--text-faint);
 }
 
-.ink-select-panel {
+.tool-select-panel {
   position: fixed;
   z-index: 96;
   max-height: 300px;
@@ -227,7 +227,7 @@ onBeforeUnmount(close)
   flex-direction: column;
   gap: 1px;
 }
-.ink-select-item {
+.tool-select-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -240,25 +240,25 @@ onBeforeUnmount(close)
   text-align: left;
   transition: background 0.12s, color 0.12s;
 }
-.ink-select-item.is-active {
+.tool-select-item.is-active {
   background: var(--hover);
   color: var(--accent);
 }
-.ink-select-item.is-selected {
+.tool-select-item.is-selected {
   color: var(--accent);
 }
 
-.ink-sel-enter-active {
+.tool-sel-enter-active {
   transition: opacity 0.15s var(--ease-out-quart), transform 0.15s var(--ease-out-quart);
 }
-.ink-sel-leave-active {
+.tool-sel-leave-active {
   transition: opacity 0.1s ease;
 }
-.ink-sel-enter-from {
+.tool-sel-enter-from {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);
 }
-.ink-sel-leave-to {
+.tool-sel-leave-to {
   opacity: 0;
 }
 </style>

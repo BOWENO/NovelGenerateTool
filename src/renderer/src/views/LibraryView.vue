@@ -5,12 +5,12 @@ import { useLibraryStore } from '../store/library'
 import { useAppStore } from '../store/app'
 import { useConversationStore } from '../store/conversation'
 import type { LibEntry, LibKind } from '../types'
-import InkButton from '../ui/InkButton.vue'
-import InkSegmented from '../ui/InkSegmented.vue'
-import InkModal from '../ui/InkModal.vue'
+import ToolButton from '../ui/ToolButton.vue'
+import ToolSegmented from '../ui/ToolSegmented.vue'
+import ToolModal from '../ui/ToolModal.vue'
 import PageSubNav from '../ui/PageSubNav.vue'
 import { onHeaderAction } from '../ui/headerActions'
-import { inkPrompt, inkConfirm } from '../ui/inkPrompt'
+import { toolPrompt, toolConfirm } from '../ui/toolPrompt'
 import { aiRun } from '../ai'
 import {
   Plus,
@@ -76,7 +76,7 @@ function newEntry(k?: LibKind, group = '通用') {
 async function saveEntry() {
   if (!active.value) return
   if (!form.value.name.trim()) {
-    await inkPrompt('请填写名称', '')
+    await toolPrompt('请填写名称', '')
     return
   }
   const name = form.value.name.trim()
@@ -86,7 +86,7 @@ async function saveEntry() {
   if (renaming) {
     const exists = libs.groups(active.value.kind).some((g) => g.group === form.value.group && g.entries.some((e) => e.name === name))
     if (exists) {
-      const ok = await inkConfirm(`「${form.value.group}/${name}」已存在，覆盖它的内容？`, { confirmText: '覆盖', danger: true })
+      const ok = await toolConfirm(`「${form.value.group}/${name}」已存在，覆盖它的内容？`, { confirmText: '覆盖', danger: true })
       if (!ok) return
     }
   }
@@ -102,21 +102,21 @@ async function saveEntry() {
 
 async function removeEntry() {
   if (!active.value || !original.value.name) return
-  const ok = await inkConfirm(`确定删除「${original.value.name}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除「${original.value.name}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   await libs.remove(active.value.kind, original.value.group, original.value.name)
   active.value = null
 }
 
 async function addGroup() {
-  const name = await inkPrompt('新建分组名称', '')
+  const name = await toolPrompt('新建分组名称', '')
   if (!name) return
   await libs.createGroup(kind.value, name)
 }
 
 async function delGroup(name: string, count: number) {
   // 无论分组是否为空都要确认：删除是不可恢复操作
-  const ok = await inkConfirm(`确定删除分组「${name}」？`, {
+  const ok = await toolConfirm(`确定删除分组「${name}」？`, {
     detail: count > 0 ? `该分组下还有 ${count} 个条目，删除后会一并移除。` : '该分组当前为空。',
     confirmText: '删除',
     danger: true
@@ -125,7 +125,7 @@ async function delGroup(name: string, count: number) {
   try {
     await libs.deleteGroup(kind.value, name)
   } catch (e) {
-    await inkConfirm('删除分组失败', {
+    await toolConfirm('删除分组失败', {
       detail: (e as Error).message.replace('Error invoking remote method', '').trim(),
       cancelText: ''
     })
@@ -140,7 +140,7 @@ async function importSkill() {
     if (name) await openEntry({ kind: 'skills', group: form.value.group || '通用', name, path: '', summary: '', tags: [], updatedAt: '', size: 0 })
   } catch (e) {
     // 重名导入等主进程报错要有可见反馈，不能静默失败
-    await inkConfirm('导入技能失败', {
+    await toolConfirm('导入技能失败', {
       detail: (e as Error).message.replace('Error invoking remote method', '').trim(),
       cancelText: ''
     })
@@ -178,7 +178,7 @@ watch(kind, () => (selected.value = []))
 async function removeSelected() {
   const n = selected.value.length
   if (!n) return
-  const ok = await inkConfirm(`确定删除选中的 ${n} 个条目？`, { detail: '此操作不可恢复。', confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除选中的 ${n} 个条目？`, { detail: '此操作不可恢复。', confirmText: '删除', danger: true })
   if (!ok) return
   const targets = tabEntries.value.filter(isSelected)
   for (const e of targets) await window.api.libDelete(e.kind, e.group, e.name)
@@ -193,7 +193,7 @@ const KIND_LABEL: Record<LibKind, string> = { materials: '素材库', skills: '�
 /** 交给资源管家：批量整理、体检等需要读全库与多轮判断的任务 */
 async function askLibrarian(text: string) {
   if (!lib.current) {
-    await inkConfirm('尚未打开作品', { detail: '资源管家需要结合作品上下文工作，请先到书架打开一部作品。', cancelText: '' })
+    await toolConfirm('尚未打开作品', { detail: '资源管家需要结合作品上下文工作，请先到书架打开一部作品。', cancelText: '' })
     return
   }
   app.go('assistant')
@@ -365,7 +365,7 @@ async function saveDraftItems() {
   if (!pickedItems.length) return
   const dup = pickedItems.filter((i) => tabEntries.value.some((e) => e.group === g && e.name === i.name))
   if (dup.length) {
-    const ok = await inkConfirm(`有 ${dup.length} 个条目与现有条目同名`, {
+    const ok = await toolConfirm(`有 ${dup.length} 个条目与现有条目同名`, {
       detail: `入库会覆盖同名条目的内容：${dup.map((d) => d.name).join('、')}`,
       confirmText: '覆盖入库',
       danger: true
@@ -505,7 +505,7 @@ onMounted(async () => {
     else if (key === 'library:importSkill') void importSkill()
     else if (key === 'library:aiDraft') openDraft()
   })
-  window.addEventListener('inkdesk:lib-changed', onLibChanged)
+  window.addEventListener('novelgeneratetool:lib-changed', onLibChanged)
   void libs.refresh()
 })
 
@@ -528,7 +528,7 @@ watch(
 onUnmounted(() => {
   offHeader?.()
   offHeader = null
-  window.removeEventListener('inkdesk:lib-changed', onLibChanged)
+  window.removeEventListener('novelgeneratetool:lib-changed', onLibChanged)
 })
 
 /** 侧栏点「技能库 / 素材库」时切到对应标签 */
@@ -618,7 +618,7 @@ watch(
           </button>
         </div>
         <div class="mb-4">
-          <InkSegmented
+          <ToolSegmented
             v-model="bindKindValue"
             :options="[
               { value: 'skills', label: '技能库' },
@@ -694,21 +694,21 @@ watch(
         </div>
         <div v-else class="max-w-3xl px-7 py-5 space-y-4">
           <div class="flex gap-2">
-            <input v-model="form.name" class="ink-input flex-1" placeholder="条目名称" />
-            <input v-model="form.group" class="ink-input w-40" placeholder="所属分组" list="group-list" />
+            <input v-model="form.name" class="tool-input flex-1" placeholder="条目名称" />
+            <input v-model="form.group" class="tool-input w-40" placeholder="所属分组" list="group-list" />
             <datalist id="group-list">
               <option v-for="g in groups" :key="g.name" :value="g.name" />
             </datalist>
           </div>
-          <input v-model="form.summary" class="ink-input" placeholder="一句话摘要（智能体据此判断是否引用）" />
-          <input v-model="form.tags" class="ink-input" placeholder="标签，用逗号分隔" />
+          <input v-model="form.summary" class="tool-input" placeholder="一句话摘要（智能体据此判断是否引用）" />
+          <input v-model="form.tags" class="tool-input" placeholder="标签，用逗号分隔" />
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">正文（Markdown）</div>
-            <textarea v-model="form.body" rows="16" class="ink-textarea font-mono text-[12.5px]" placeholder="技能步骤 / 素材内容…" />
+            <textarea v-model="form.body" rows="16" class="tool-textarea font-mono text-[12.5px]" placeholder="技能步骤 / 素材内容…" />
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <InkButton @click="saveEntry"><Save :size="13" /> 保存</InkButton>
-            <InkButton v-if="original.name" variant="ghost" @click="removeEntry"><Trash2 :size="13" /> 删除</InkButton>
+            <ToolButton @click="saveEntry"><Save :size="13" /> 保存</ToolButton>
+            <ToolButton v-if="original.name" variant="ghost" @click="removeEntry"><Trash2 :size="13" /> 删除</ToolButton>
             <button
               v-if="original.name"
               class="text-[12px] text-[var(--text-dim)] hover:text-[var(--accent)] cursor-pointer px-1 inline-flex items-center gap-1"
@@ -736,15 +736,15 @@ watch(
     </div>
 
     <!-- AI 起草浮层 -->
-    <InkModal :open="draftOpen" title="AI 起草条目" wide @close="draftOpen = false">
+    <ToolModal :open="draftOpen" title="AI 起草条目" wide @close="draftOpen = false">
       <div class="space-y-4">
         <div class="flex items-center gap-2 text-[12px]">
           <span class="text-[var(--text-faint)]">目标库</span>
           <span style="color: var(--accent)">{{ KIND_LABEL[kind] }}</span>
           <span class="text-[var(--text-faint)]">· 分组</span>
-          <input v-model="form.group" class="ink-input w-32" placeholder="通用" list="group-list" />
+          <input v-model="form.group" class="tool-input w-32" placeholder="通用" list="group-list" />
           <div class="flex-1" />
-          <InkSegmented
+          <ToolSegmented
             :model-value="draftBatch ? 'batch' : 'single'"
             :options="[
               { value: 'single', label: '单条' },
@@ -761,7 +761,7 @@ watch(
         <textarea
           v-model="draftReq"
           rows="3"
-          class="ink-textarea text-[13px]"
+          class="tool-textarea text-[13px]"
           :placeholder="
             kind === 'skills'
               ? '例如：我想要一个「怎么写出窒息感追妻火葬场」的写作方法，要能直接照着执行'
@@ -772,10 +772,10 @@ watch(
         />
 
         <div class="flex items-center gap-2">
-          <InkButton :disabled="draftRunning || !draftReq.trim()" @click="runDraft">
+          <ToolButton :disabled="draftRunning || !draftReq.trim()" @click="runDraft">
             <WandSparkles :size="13" /> {{ draftRunning ? '生成中…' : '生成' }}
-          </InkButton>
-          <InkButton v-if="draftRunning" variant="ghost" @click="stopDraft">停止</InkButton>
+          </ToolButton>
+          <ToolButton v-if="draftRunning" variant="ghost" @click="stopDraft">停止</ToolButton>
           <span v-if="draftError" class="text-[12px] text-[#e08a7a]">{{ draftError }}</span>
         </div>
 
@@ -814,16 +814,16 @@ watch(
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-1">
-          <InkButton variant="ghost" @click="draftOpen = false">关闭</InkButton>
-          <InkButton :disabled="!draftItems.filter((i) => i.picked).length" @click="saveDraftItems">
+          <ToolButton variant="ghost" @click="draftOpen = false">关闭</ToolButton>
+          <ToolButton :disabled="!draftItems.filter((i) => i.picked).length" @click="saveDraftItems">
             入库 {{ draftItems.filter((i) => i.picked).length }} 条
-          </InkButton>
+          </ToolButton>
         </div>
       </div>
-    </InkModal>
+    </ToolModal>
 
     <!-- AI 改写浮层 -->
-    <InkModal :open="rewriteOpen" title="AI 改写条目" @close="rewriteOpen = false">
+    <ToolModal :open="rewriteOpen" title="AI 改写条目" @close="rewriteOpen = false">
       <div class="space-y-4">
         <div class="text-[12px] text-[var(--text-faint)]">
           正在改写：<span style="color: var(--accent)">{{ form.name || '未命名' }}</span>
@@ -831,14 +831,14 @@ watch(
         <textarea
           v-model="rewriteReq"
           rows="3"
-          class="ink-textarea text-[13px]"
+          class="tool-textarea text-[13px]"
           placeholder="例如：太短了帮我充实一下 / 精简到一半 / 换成更适合男频的直给风格 / 补上标签和摘要"
         />
         <div class="flex items-center gap-2">
-          <InkButton :disabled="rewriteRunning || !rewriteReq.trim()" @click="runRewrite">
+          <ToolButton :disabled="rewriteRunning || !rewriteReq.trim()" @click="runRewrite">
             <WandSparkles :size="13" /> {{ rewriteRunning ? '改写中…' : '开始改写' }}
-          </InkButton>
-          <InkButton v-if="rewriteRunning" variant="ghost" @click="stopRewrite">停止</InkButton>
+          </ToolButton>
+          <ToolButton v-if="rewriteRunning" variant="ghost" @click="stopRewrite">停止</ToolButton>
           <span v-if="rewriteError" class="text-[12px] text-[#e08a7a]">{{ rewriteError }}</span>
         </div>
         <div v-if="rewriteText" class="max-h-64 overflow-y-auto rounded-lg bg-[var(--bg-soft)] p-3 text-[12px] leading-6 whitespace-pre-wrap select-text">
@@ -848,10 +848,10 @@ watch(
           改写结果会填回表单，不会直接覆盖。你确认后再点「保存」。
         </p>
         <div class="flex items-center justify-end gap-2">
-          <InkButton variant="ghost" @click="rewriteOpen = false">关闭</InkButton>
-          <InkButton :disabled="!rewriteText.trim()" @click="applyRewrite">填入表单</InkButton>
+          <ToolButton variant="ghost" @click="rewriteOpen = false">关闭</ToolButton>
+          <ToolButton :disabled="!rewriteText.trim()" @click="applyRewrite">填入表单</ToolButton>
         </div>
       </div>
-    </InkModal>
+    </ToolModal>
   </div>
 </template>

@@ -5,7 +5,7 @@ import { useLibraryStore } from '../../store/library'
 import { useConversationStore } from '../../store/conversation'
 import ConversationMessage from './ConversationMessage.vue'
 import AgentComposer from './AgentComposer.vue'
-import { inkConfirm } from '../../ui/inkPrompt'
+import { toolConfirm } from '../../ui/toolPrompt'
 import { ChevronDown, ChevronRight, History, Download, Trash2, Sparkles, ScrollText } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{ fullWidth?: boolean }>(), { fullWidth: false })
@@ -14,7 +14,7 @@ const app = useAppStore()
 const lib = useLibraryStore()
 const conv = useConversationStore()
 
-/** 全宽模式（妙笔独立页）下给内容与输入区一个舒适的可读宽度 */
+/** 全宽模式（创作助手独立页）下给内容与输入区一个舒适的可读宽度 */
 const innerWidth = computed(() => (props.fullWidth ? 'max-w-[820px] mx-auto w-full' : ''))
 
 const listEl = ref<HTMLElement>()
@@ -103,7 +103,7 @@ async function pickAgent(id: string) {
 
 /** 删除会话不可恢复，先确认再动手 */
 async function removeConversation(id: string, title: string) {
-  const ok = await inkConfirm(`确定删除会话「${title || '新会话'}」？`, {
+  const ok = await toolConfirm(`确定删除会话「${title || '新会话'}」？`, {
     detail: '该会话的全部对话内容将被移除，此操作不可恢复。',
     confirmText: '删除',
     danger: true
@@ -248,9 +248,9 @@ function fmtTime(iso: string): string {
           <div class="text-center mb-7">
             <div class="flex items-center justify-center gap-2.5 mb-2.5">
               <span class="h-px w-6" style="background: var(--accent)" />
-              <span class="text-[10.5px] tracking-[0.22em] text-[var(--text-faint)]">妙笔 · {{ currentAgent.stage || '智能体' }}</span>
+              <span class="text-[10.5px] tracking-[0.22em] text-[var(--text-faint)]">创作助手 · {{ currentAgent.stage || '智能体' }}</span>
             </div>
-            <div class="font-serif-ink text-[24px] mb-2">{{ currentAgent.name }}</div>
+            <div class="font-serif-tool text-[24px] mb-2">{{ currentAgent.name }}</div>
             <div class="text-[12.5px] text-[var(--text-faint)] max-w-[460px] mx-auto leading-5">{{ currentAgent.desc }}</div>
           </div>
           <div class="grid gap-2.5" :class="props.fullWidth ? 'sm:grid-cols-2' : ''">

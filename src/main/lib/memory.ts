@@ -2,6 +2,7 @@ import { app, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { getLibraryRoot } from './library'
+import { atomicWrite } from './atomic'
 
 // ============ 作者记忆（阶段三）条目式存储：全局（跨书）+ 书籍（单书） ============
 // 记忆以「条目」为单位增删改（每条一句话），存 JSON 文件；UI 逐条卡片管理，智能体单条增改不碰其他条目。
@@ -45,7 +46,7 @@ function migrateMd(md: string): MemoryEntry[] | null {
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith('#') && !l.startsWith('<!--') && !l.startsWith('-->'))
   if (!lines.length) return null
-  return lines.map((l) => ({ id: uid(), text: l.replace(/^[-*]\s*/, '').slice(0, 500), category: '', createdAt: new Date().toISOString() }))
+  return lines.map((l) => ({ id: uid(), text: l.replace(/^[-*]\s*/, ''), category: '', createdAt: new Date().toISOString() }))
 }
 
 function readEntries(jsonPath: string, mdPath: string, ensureDir?: string): MemoryEntry[] {
@@ -54,7 +55,7 @@ function readEntries(jsonPath: string, mdPath: string, ensureDir?: string): Memo
       const data = JSON.parse(readFileSync(jsonPath, 'utf-8'))
       return Array.isArray(data.entries) ? data.entries : []
     } catch {
-      return []
+      throw new Error('记忆文件无法读取，请从备份恢复后再生成。')
     }
   }
   // 旧 md 迁移
@@ -64,7 +65,7 @@ function readEntries(jsonPath: string, mdPath: string, ensureDir?: string): Memo
       const entries = migrateMd(md)
       if (entries) {
         if (ensureDir) mkdirSync(ensureDir, { recursive: true })
-        writeFileSync(jsonPath, JSON.stringify({ entries }, null, 2), 'utf-8')
+        atomicWrite(jsonPath, JSON.stringify({ entries }, null, 2))
         renameSync(mdPath, `${mdPath}.bak`)
         return entries
       }
@@ -77,7 +78,7 @@ function readEntries(jsonPath: string, mdPath: string, ensureDir?: string): Memo
 
 function writeEntries(jsonPath: string, entries: MemoryEntry[], ensureDir?: string): void {
   if (ensureDir) mkdirSync(ensureDir, { recursive: true })
-  writeFileSync(jsonPath, JSON.stringify({ entries }, null, 2), 'utf-8')
+  atomicWrite(jsonPath, JSON.stringify({ entries }, null, 2))
 }
 
 export function readGlobalEntries(): MemoryEntry[] {
@@ -85,7 +86,7 @@ export function readGlobalEntries(): MemoryEntry[] {
 }
 
 export function writeGlobalEntries(entries: MemoryEntry[]): void {
-  writeEntries(globalJsonPath(), entries.slice(0, 500))
+  writeEntries(globalJsonPath(), entries)
 }
 
 export function readBookEntries(book: string): MemoryEntry[] {
@@ -96,7 +97,7 @@ export function readBookEntries(book: string): MemoryEntry[] {
 
 export function writeBookEntries(book: string, entries: MemoryEntry[]): void {
   if (!book || !book.trim()) return
-  writeEntries(bookJsonPath(book), entries.slice(0, 500), join(getLibraryRoot(), book, '记忆'))
+  writeEntries(bookJsonPath(book), entries, join(getLibraryRoot(), book, '记忆'))
 }
 
 /** 在系统编辑器里打开记忆 JSON 文件 */

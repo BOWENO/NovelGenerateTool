@@ -2,6 +2,8 @@ import { BrowserWindow } from 'electron'
 import { getConfig, Provider, TaskCfg } from './lib/config'
 import { getPrompt, renderPrompt, DEAI_LEVELS } from './lib/prompts'
 import { estimateTokens, recordCall } from './lib/ailog'
+import { streamEvents } from './lib/stream'
+import { assertContextFits } from './lib/context'
 
 const TASK_LABELS: Record<string, string> = {
   workflow: '拆书 / 资料登记',
@@ -10,7 +12,7 @@ const TASK_LABELS: Record<string, string> = {
   chapter: '逐章正文',
   continue: '智能续写',
   polish: '润色 / 扩写 / 纠错',
-  deai: '去 AI 味',
+  deai: '风格检查',
   selection: '划词自定义',
   agent: '智能体对话'
 }
@@ -52,6 +54,7 @@ export async function runAi(win: BrowserWindow, params: AiRunParams): Promise<vo
   }
 
   let system = params.systemOverride || ''
+  let userInput = vars.input ?? ''
   if (!system) {
     const tpl = getPrompt(promptId)
     if (!tpl) {
@@ -63,6 +66,7 @@ export async function runAi(win: BrowserWindow, params: AiRunParams): Promise<vo
       allVars.strength = DEAI_LEVELS[params.deaiLevel] || DEAI_LEVELS.L2
     }
     system = renderPrompt(tpl, allVars)
+    if (tpl.includes('{{input}}')) userInput = ''
   }
   const sensitive = cfg.sensitiveWords || []
   if (sensitive.length) {
@@ -77,6 +81,7 @@ export async function runAi(win: BrowserWindow, params: AiRunParams): Promise<vo
   let errMsg = ''
   let full = ''
   try {
+    assertContextFits(system.length + userInput.length, cfg.modelContexts?.[`${provider.id}/${taskCfg.model}`])
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       signal: controller.signal,
@@ -90,7 +95,7 @@ export async function runAi(win: BrowserWindow, params: AiRunParams): Promise<vo
         stream: true,
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: vars.input ?? '' }
+          { role: 'user', content: userInput || '请执行上述任务。' }
         ]
       })
     })
@@ -99,37 +104,14 @@ export async function runAi(win: BrowserWindow, params: AiRunParams): Promise<vo
       const hint = res.status === 401 ? '（API Key 无效或未填）' : res.status === 404 ? '（接口地址或模型名可能有误）' : ''
       throw new Error(`接口返回 ${res.status}${hint}：${text.slice(0, 300)}`)
     }
-    const reader = res.body?.getReader()
-    if (!reader) throw new Error('响应无内容流')
-    const decoder = new TextDecoder()
-    let buf = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buf += decoder.decode(value, { stream: true })
-      const lines = buf.split('\n')
-      buf = lines.pop() || ''
-      for (const line of lines) {
-        const t = line.trim()
-        if (!t.startsWith('data:')) continue
-        const data = t.slice(5).trim()
-        if (data === '[DONE]') continue
-        try {
-          const json = JSON.parse(data)
-          const delta = json.choices?.[0]?.delta ?? {}
-          const content: string = delta.content ?? ''
-          if (content) {
-            full += content
-            send(win, runId, 'chunk', content)
-          } else if (delta.reasoning_content || delta.reasoning) {
-            // 推理模型的思考期：不计入正文，但作为活动信号下发——
-            // 否则思考期长达数分钟时渲染层收不到任何 chunk，看门狗会误杀正常请求
-            send(win, runId, 'reason', '')
-          }
-        } catch {
-          /* 忽略不完整行 */
-        }
+    for await (const json of streamEvents(res)) {
+      const delta = json.choices?.[0]?.delta ?? {}
+      const content: string = delta.content ?? ''
+      if (content) {
+        full += content
+        send(win, runId, 'chunk', content)
       }
+      if (delta.reasoning_content || delta.reasoning) send(win, runId, 'reason', '')
     }
     send(win, runId, 'done', full)
   } catch (e) {
@@ -153,7 +135,7 @@ export async function runAi(win: BrowserWindow, params: AiRunParams): Promise<vo
       ok: status === 'success',
       status,
       durationMs: Date.now() - startedAt,
-      tokens: estimateTokens((vars.input?.length || 0) + full.length + system.length),
+      tokens: estimateTokens(userInput.length + full.length + system.length),
       tokensEstimated: true,
       error: errMsg
     })

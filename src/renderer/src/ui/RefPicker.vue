@@ -2,7 +2,7 @@
 // 引用资料选择器：从技能库 / 素材库 / 灵感便签挑选条目，chips 展示（工作流等场景共用）
 import { computed, onMounted, ref } from 'vue'
 import { useLibrariesStore } from '../store/libraries'
-import InkModal from './InkModal.vue'
+import ToolModal from './ToolModal.vue'
 import type { LibKind } from '../types'
 import { Plus, Search, Sparkles, BookOpen, Lightbulb } from 'lucide-vue-next'
 
@@ -82,7 +82,7 @@ onMounted(() => void libs.refresh())
     </button>
   </div>
 
-  <InkModal :open="open" title="选择引用资料" wide @close="open = false">
+  <ToolModal :open="open" title="选择引用资料" wide @close="open = false">
     <div class="space-y-3">
       <div class="flex items-center gap-2">
         <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-[var(--bg-soft)]">
@@ -99,7 +99,7 @@ onMounted(() => void libs.refresh())
         </div>
         <div class="relative flex-1">
           <Search :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
-          <input v-model="query" class="ink-input pl-8 h-8 py-0 text-[12.5px]" placeholder="搜索名称 / 摘要 / 标签" />
+          <input v-model="query" class="tool-input pl-8 h-8 py-0 text-[12.5px]" placeholder="搜索名称 / 摘要 / 标签" />
         </div>
       </div>
       <div class="max-h-[360px] overflow-y-auto space-y-1">
@@ -127,5 +127,5 @@ onMounted(() => void libs.refresh())
         <button class="text-[12px] px-3 py-1.5 rounded-lg cursor-pointer text-[#1b1712]" :style="{ background: 'var(--accent)' }" @click="open = false">完成</button>
       </div>
     </div>
-  </InkModal>
+  </ToolModal>
 </template>

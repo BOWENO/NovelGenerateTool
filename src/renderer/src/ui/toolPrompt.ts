@@ -15,7 +15,7 @@ export const promptState = reactive<PromptState>({
   resolve: null
 })
 
-export function inkPrompt(title: string, defaultValue = ''): Promise<string | null> {
+export function toolPrompt(title: string, defaultValue = ''): Promise<string | null> {
   return new Promise((resolve) => {
     promptState.open = true
     promptState.title = title
@@ -58,7 +58,7 @@ export const confirmState = reactive<ConfirmState>({
   resolve: null
 })
 
-export function inkConfirm(title: string, opts: ConfirmOpts = {}): Promise<boolean> {
+export function toolConfirm(title: string, opts: ConfirmOpts = {}): Promise<boolean> {
   return new Promise((resolve) => {
     confirmState.open = true
     confirmState.title = title

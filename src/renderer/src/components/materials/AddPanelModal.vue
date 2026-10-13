@@ -2,9 +2,9 @@
 /** 新建自定义面板向导（阶段二第 4 步）：面板名 + 字段自定义（空白列表默认 标题+内容） */
 import { ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
-import InkModal from '../../ui/InkModal.vue'
-import InkButton from '../../ui/InkButton.vue'
-import InkSelect from '../../ui/InkSelect.vue'
+import ToolModal from '../../ui/ToolModal.vue'
+import ToolButton from '../../ui/ToolButton.vue'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { Plus, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{ open: boolean }>()
@@ -84,21 +84,21 @@ async function create() {
 </script>
 
 <template>
-  <InkModal :open="open" title="新建自定义面板" @close="emit('close')">
+  <ToolModal :open="open" title="新建自定义面板" @close="emit('close')">
     <div class="space-y-4 text-sm">
       <div class="space-y-1.5">
         <div class="text-[12px] text-[var(--text-dim)]">面板名称</div>
-        <input v-model="name" class="ink-input" placeholder="如：文风 / 科技树 / 桥段库 / 禁忌清单" @keydown.enter="create" />
+        <input v-model="name" class="tool-input" placeholder="如：文风 / 科技树 / 桥段库 / 禁忌清单" @keydown.enter="create" />
       </div>
 
       <div class="space-y-1.5">
         <div class="flex items-center justify-between">
           <div class="text-[12px] text-[var(--text-dim)]">字段（每条条目会按这些字段填写）</div>
-          <InkButton variant="ghost" @click="addRow"><Plus :size="12" /> 加字段</InkButton>
+          <ToolButton variant="ghost" @click="addRow"><Plus :size="12" /> 加字段</ToolButton>
         </div>
         <div v-for="(r, i) in rows" :key="i" class="flex items-center gap-2">
-          <input v-model="r.label" class="ink-input flex-1" placeholder="字段名，如：要点 / 禁用词 / 示例" />
-          <InkSelect v-model="r.type" class="w-24 shrink-0" :options="TYPE_OPTS" />
+          <input v-model="r.label" class="tool-input flex-1" placeholder="字段名，如：要点 / 禁用词 / 示例" />
+          <ToolSelect v-model="r.type" class="w-24 shrink-0" :options="TYPE_OPTS" />
           <button
             class="text-[var(--text-faint)] hover:text-[#e08a7a] cursor-pointer shrink-0 disabled:opacity-30"
             :disabled="rows.length <= 1"
@@ -113,9 +113,9 @@ async function create() {
       <div v-if="err" class="text-[12.5px] text-[#e08a7a]">{{ err }}</div>
 
       <div class="flex justify-end gap-2 pt-1">
-        <InkButton variant="ghost" @click="emit('close')">取消</InkButton>
-        <InkButton :disabled="creating" @click="create">创建面板</InkButton>
+        <ToolButton variant="ghost" @click="emit('close')">取消</ToolButton>
+        <ToolButton :disabled="creating" @click="create">创建面板</ToolButton>
       </div>
     </div>
-  </InkModal>
+  </ToolModal>
 </template>

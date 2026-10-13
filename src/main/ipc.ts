@@ -64,6 +64,7 @@ export function registerIpc(): void {
 
   ipcMain.handle('file:read', (_e, book: string, rel: string) => lib.readTextFile(book, rel))
   ipcMain.handle('file:write', (_e, book: string, rel: string, content: string) => lib.writeTextFile(book, rel, content))
+  ipcMain.handle('chapter:adopt', (_e, book: string, rel: string, base: string, content: string) => lib.adoptChapter(book, rel, base, content))
   ipcMain.handle('file:delete', (_e, book: string, rel: string) => lib.deleteFile(book, rel))
   ipcMain.handle('history:list', (_e, book: string, rel: string) => lib.historyList(book, rel))
   ipcMain.handle('history:read', (_e, book: string, rel: string, file: string) => lib.historyRead(book, rel, file))
@@ -208,7 +209,7 @@ export function registerIpc(): void {
   ipcMain.handle('panels:setHidden', (_e, book: string, id: string, hidden: boolean) => panels.setPanelHidden(book, id, hidden))
   ipcMain.handle('panels:read', (_e, book: string, panelId: string) => panels.readPanelData(book, panelId))
   ipcMain.handle('panels:write', (_e, book: string, panelId: string, data: unknown) => panels.writePanelData(book, panelId, data))
-  // 词库外置（去AI味信号词/红牌追加表）
+  // 词库外置（风格检查信号词/红牌追加表）
   ipcMain.handle('lexicon:read', () => lexicon.readLexicon())
   ipcMain.handle('lexicon:save', (_e, data: unknown) => lexicon.saveLexicon(data as never))
   ipcMain.handle('lexicon:open', () => lexicon.openLexicon())

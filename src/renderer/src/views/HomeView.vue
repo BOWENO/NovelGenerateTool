@@ -10,11 +10,9 @@ const lib = useLibraryStore()
 // ============ 问候 ============
 const greeting = ref('')
 const QUOTES = [
-  '路漫漫其修远兮，吾将上下而求索。',
-  '文章千古事，得失寸心知。',
-  '笔落惊风雨，诗成泣鬼神。',
-  '为人性僻耽佳句，语不惊人死不休。',
-  '读书破万卷，下笔如有神。'
+  '从人物的当场选择开始。',
+  '完成当前场面，再连接它的后果。',
+  '把有效的表现留在稿子里。'
 ]
 const quote = ref(QUOTES[0])
 
@@ -47,7 +45,7 @@ const recentBooks = ref<BookCard[]>([])
 const todayHand = ref(0)
 const todayAi = ref(0)
 const streak = ref(0)
-const goal = ref(Number(localStorage.getItem('inkdesk.dailyGoal')) || 3000)
+const goal = ref(Number(localStorage.getItem('novelgeneratetool.dailyGoal')) || 3000)
 /** 进度条挂载后再涨到目标值，形成增长动画 */
 const barReady = ref(false)
 
@@ -161,7 +159,7 @@ async function saveNote() {
   await window.api.libWrite('notes', '通用', `${name} · ${stamp}`, '首页速记', ['灵感'], text)
   note.value = ''
   noteSaved.value = true
-  window.dispatchEvent(new CustomEvent('inkdesk:lib-changed'))
+  window.dispatchEvent(new CustomEvent('novelgeneratetool:lib-changed'))
   setTimeout(() => (noteSaved.value = false), 2500)
 }
 
@@ -173,8 +171,8 @@ function openNotes() {
 const TOOLS = [
   { key: 'new', title: 'AI 一键建书', desc: '定位 + 灵感生成', icon: SquarePen, run: () => app.requestBookshelf('new') },
   { key: 'workflow', title: '逐章生文工作流', desc: '细纲到正文一条龙', icon: Workflow, run: () => app.go('workflow') },
-  { key: 'deai', title: '整章去 AI 味', desc: '六维信号 + 注入改写', icon: Wand2, run: () => { app.writingRightTab = 'deai'; app.go('writing') } },
-  { key: 'assistant', title: '妙笔', desc: '智能体工作台', icon: UserRound, run: () => app.go('assistant') },
+  { key: 'deai', title: '整章风格检查', desc: '场面诊断与定向修订', icon: Wand2, run: () => { app.writingRightTab = 'deai'; app.go('writing') } },
+  { key: 'assistant', title: '创作助手', desc: '智能体工作台', icon: UserRound, run: () => app.go('assistant') },
   { key: 'memory', title: '记忆库', desc: '全局与本书记忆', icon: Brain, run: () => { app.settingsTab = 'memory'; app.go('settings') } },
   { key: 'panels', title: '添加面板', desc: '新建自定义面板', icon: LayoutGrid, run: () => { app.materialsAddOpen = true; app.go('materials') } },
   { key: 'deconstruct', title: '竞品拆书', desc: '分析节奏与爽点', icon: FileSearch, run: () => app.go('deconstruct') },
@@ -187,8 +185,6 @@ onMounted(() => void load())
 <template>
   <div class="h-full overflow-y-auto">
     <div class="relative max-w-[1120px] mx-auto px-8 py-6">
-      <!-- 背景装饰：淡金「墨」字水印（纯装饰，不可交互） -->
-      <div aria-hidden="true" class="pointer-events-none absolute -top-8 right-0 font-serif-ink text-[220px] leading-none select-none" style="color: var(--accent); opacity: 0.04">墨</div>
 
       <!-- 问候区：眉线 + 大宋体 + 引文，右侧作品入口胶囊 -->
       <div class="rise-in relative mb-6 flex items-end justify-between gap-4">
@@ -197,7 +193,7 @@ onMounted(() => void load())
             <span class="h-px w-7" style="background: var(--accent)" />
             <span class="text-[10.5px] tracking-[0.22em] text-[var(--text-faint)]">{{ today }}</span>
           </div>
-          <h1 class="font-serif-ink text-[26px] leading-tight mb-1.5">{{ greeting }}</h1>
+          <h1 class="font-serif-tool text-[26px] leading-tight mb-1.5">{{ greeting }}</h1>
           <p class="text-[12px] text-[var(--text-faint)]">
             <span style="color: var(--accent)">「</span> {{ quote }}
             <span style="color: var(--accent)">」</span>
@@ -234,7 +230,7 @@ onMounted(() => void load())
                 class="shrink-0 w-10 h-[56px] rounded-md flex items-center justify-center overflow-hidden border transition-transform duration-200 group-hover:scale-[1.03]"
                 style="background: linear-gradient(165deg, var(--panel-2), var(--bg-soft)); border-color: var(--border); box-shadow: inset 2px 0 0 var(--accent)"
               >
-                <span class="font-serif-ink text-[10px] leading-tight text-center px-0.5" style="writing-mode: vertical-rl; color: var(--accent); max-height: 46px; overflow: hidden">
+                <span class="font-serif-tool text-[10px] leading-tight text-center px-0.5" style="writing-mode: vertical-rl; color: var(--accent); max-height: 46px; overflow: hidden">
                   {{ b.title.slice(0, 6) }}
                 </span>
               </div>
@@ -273,7 +269,7 @@ onMounted(() => void load())
           <div class="space-y-3.5 flex-1">
             <div>
               <div class="flex items-baseline gap-1.5">
-                <span class="font-serif-ink text-[27px] leading-none" :style="{ color: 'var(--accent)' }">{{ todayHand }}</span>
+                <span class="font-serif-tool text-[27px] leading-none" :style="{ color: 'var(--accent)' }">{{ todayHand }}</span>
                 <span class="text-[11px] text-[var(--text-faint)]">字 · 手写</span>
                 <span class="ml-auto text-[10.5px] text-[var(--text-dim)] tabular-nums">{{ handPct }}%</span>
               </div>
@@ -287,7 +283,7 @@ onMounted(() => void load())
             </div>
             <div>
               <div class="flex items-baseline gap-1.5">
-                <span class="font-serif-ink text-[27px] leading-none" :style="{ color: 'var(--accent)', opacity: 0.62 }">{{ todayAi }}</span>
+                <span class="font-serif-tool text-[27px] leading-none" :style="{ color: 'var(--accent)', opacity: 0.62 }">{{ todayAi }}</span>
                 <span class="text-[11px] text-[var(--text-faint)]">字 · AI 辅助</span>
                 <span class="ml-auto text-[10.5px] text-[var(--text-dim)] tabular-nums">{{ aiPct }}%</span>
               </div>
@@ -330,7 +326,7 @@ onMounted(() => void load())
               便签库
             </button>
           </div>
-          <textarea v-model="note" class="ink-textarea flex-1 text-[12.5px] resize-none min-h-[96px]" placeholder="点击记录灵感…自动存进灵感便签" />
+          <textarea v-model="note" class="tool-textarea flex-1 text-[12.5px] resize-none min-h-[96px]" placeholder="点击记录灵感…自动存进灵感便签" />
           <button
             class="mt-2.5 w-full flex items-center justify-center gap-1.5 text-[12px] py-2 rounded-lg border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] cursor-pointer transition-colors disabled:opacity-40"
             :disabled="!note.trim()"
@@ -349,7 +345,7 @@ onMounted(() => void load())
             <TrendingUp :size="13" :style="{ color: 'var(--accent)' }" />
             <span class="text-[13px] font-medium tracking-wide">最近 14 天</span>
             <span class="h-px flex-1 ml-1.5" style="background: linear-gradient(to right, var(--border), transparent)" />
-            <span class="text-[10.5px] text-[var(--text-faint)]">合计 <span class="font-serif-ink text-[12px]" style="color: var(--accent)">{{ fmtWords(trend14Total) }}</span></span>
+            <span class="text-[10.5px] text-[var(--text-faint)]">合计 <span class="font-serif-tool text-[12px]" style="color: var(--accent)">{{ fmtWords(trend14Total) }}</span></span>
           </div>
           <div class="flex items-end gap-[3px] h-[68px]">
             <div
@@ -382,7 +378,7 @@ onMounted(() => void load())
           <div v-else class="space-y-2.5">
             <div v-for="(b, idx) in bookRanking" :key="b.title" class="cursor-pointer group" @click="openBook(b.title)">
               <div class="flex items-baseline gap-2 text-[12px]">
-                <span class="font-serif-ink text-[13px] w-5 shrink-0" :style="{ color: idx === 0 ? 'var(--accent)' : 'var(--text-faint)' }">{{ String(idx + 1).padStart(2, '0') }}</span>
+                <span class="font-serif-tool text-[13px] w-5 shrink-0" :style="{ color: idx === 0 ? 'var(--accent)' : 'var(--text-faint)' }">{{ String(idx + 1).padStart(2, '0') }}</span>
                 <span class="truncate max-w-[50%] group-hover:text-[var(--accent)] transition-colors">{{ b.title }}</span>
                 <span class="text-[10px] text-[var(--text-faint)] truncate">{{ b.genre }}</span>
                 <span class="ml-auto text-[10.5px] text-[var(--text-dim)] tabular-nums">{{ fmtWords(b.words) }}</span>

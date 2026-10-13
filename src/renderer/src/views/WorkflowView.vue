@@ -2,9 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { useAppStore } from '../store/app'
 import { useLibraryStore } from '../store/library'
-import InkButton from '../ui/InkButton.vue'
+import ToolButton from '../ui/ToolButton.vue'
 import PageSubNav from '../ui/PageSubNav.vue'
-import { inkConfirm } from '../ui/inkPrompt'
+import { toolConfirm } from '../ui/toolPrompt'
 import { aiRun } from '../ai'
 import { renderMarkdown } from '../ui/markdown'
 import RefPicker, { type RefItem } from '../ui/RefPicker.vue'
@@ -14,7 +14,7 @@ const app = useAppStore()
 const lib = useLibraryStore()
 
 /** 工作流引用资料：每次生成时注入提示词（会话级，localStorage 持久化） */
-const REFS_KEY = 'inkdesk.wfRefs'
+const REFS_KEY = 'novelgeneratetool.wfRefs'
 const wfRefs = ref<RefItem[]>((() => {
   try {
     return JSON.parse(localStorage.getItem(REFS_KEY) || '[]') as RefItem[]
@@ -22,26 +22,14 @@ const wfRefs = ref<RefItem[]>((() => {
     return []
   }
 })())
-/** 引用内容缓存（逐章生文时避免每章重读同一批条目） */
-const refCache = new Map<string, string>()
-
-watch(wfRefs, (v) => {
-  localStorage.setItem(REFS_KEY, JSON.stringify(v))
-  refCache.clear() // 引用列表变化后缓存作废，保证下次注入最新内容
-})
+watch(wfRefs, (v) => localStorage.setItem(REFS_KEY, JSON.stringify(v)))
 
 async function buildRefsBlock(): Promise<string> {
   if (!wfRefs.value.length) return ''
   const parts: string[] = []
   for (const r of wfRefs.value) {
-    const key = `${r.kind}/${r.group}/${r.name}`
-    let body = refCache.get(key) || ''
-    if (!body) {
-      const e = (await window.api.libRead(r.kind, r.group, r.name)) as { body?: string } | null
-      body = e?.body || ''
-      refCache.set(key, body)
-    }
-    if (body.trim()) parts.push(`--- ${r.name} ---\n${body.slice(0, 8000)}`)
+    const e = (await window.api.libRead(r.kind, r.group, r.name)) as { body?: string } | null
+    if (e?.body?.trim()) parts.push(`--- ${r.name} ---\n${e.body}`)
   }
   if (!parts.length) return ''
   return '\n\n【作者指定引用的资料】生成内容必须遵循这些技能方法论 / 与这些素材保持一致：\n' + parts.join('\n\n')
@@ -54,7 +42,8 @@ const REF_TARGET: Record<string, string> = {
   'wf-characters': 'outline',
   'wf-settings': 'outline',
   'wf-beat': 'outline',
-  'wf-chapter': 'beat'
+  'wf-chapter': 'beat',
+  'wf-review': 'outline'
 }
 
 const STEPS = ['灵感', '大纲', '角色', '设定', '建书', '逐章生文']
@@ -83,7 +72,7 @@ const paused = ref(true)
 const error = ref('')
 let aborter: { abort: () => void } | null = null
 
-const wf = computed(() => lib.current?.workflow || { step: 0, chapterCursor: 1, chapterTotal: 12, completed: [] })
+const wf = computed<NonNullable<typeof lib.current>['workflow']>(() => lib.current?.workflow || { step: 0, chapterCursor: 1, chapterTotal: 12, completed: [] })
 const cur = computed(() => Math.min(wf.value.step, 5))
 
 /** 磁盘实况：灵感/大纲/角色/设定是否已有内容（与 completed 标记独立，用于自动跳过与自由导航） */
@@ -115,7 +104,10 @@ async function detectExisting() {
   }
 }
 
-watch(() => lib.current?.title, () => void detectExisting(), { immediate: true })
+watch(() => lib.current?.title, (book, oldBook) => {
+  if (oldBook && book !== oldBook) { paused.value = true; aborter?.abort() }
+  void detectExisting()
+}, { immediate: true })
 
 async function loadOutline() {
   if (!lib.current) return ''
@@ -159,18 +151,17 @@ async function persistStep(step: number) {
 }
 
 async function runPrompt(promptId: string, vars: Record<string, string>, task = 'workflow'): Promise<boolean> {
+  const bookAtRun = lib.current?.title
+  const finalVars = { ...vars }
+  const target = REF_TARGET[promptId]
+  if (target && finalVars[target] !== undefined) finalVars[target] += await buildRefsBlock()
+  if (lib.current?.title !== bookAtRun) return false
   running.value = true
   error.value = ''
   genText.value = ''
   elapsed.value = 0
   if (elapsedTimer) clearInterval(elapsedTimer)
   elapsedTimer = setInterval(() => elapsed.value++, 1000)
-  // 作者引用的技能 / 素材 / 灵感随生成注入
-  const finalVars = { ...vars }
-  const target = REF_TARGET[promptId]
-  if (target && finalVars[target] !== undefined) {
-    finalVars[target] = finalVars[target] + (await buildRefsBlock())
-  }
   // 流式看门狗：60 秒无 chunk 提示，150 秒无 chunk 自动中止（连接假死不再无限干等）
   // 推理模型的思考期会持续发 reason 信号，视为活动，不会误杀
   const labelBase = liveLabel.value
@@ -188,6 +179,7 @@ async function runPrompt(promptId: string, vars: Record<string, string>, task = 
   }, 5000)
   const a = aiRun(task, promptId, finalVars, {
     onChunk: (c) => {
+      if (lib.current?.title !== bookAtRun) return
       lastChunkAt = Date.now()
       if (thinkingShown) {
         thinkingShown = false
@@ -196,6 +188,7 @@ async function runPrompt(promptId: string, vars: Record<string, string>, task = 
       genText.value += c
     },
     onReason: () => {
+      if (lib.current?.title !== bookAtRun) return
       // 模型在思考（推理模型的 reasoning 流）：重置看门狗并提示，正文一个字都还没开始出
       lastChunkAt = Date.now()
       if (!thinkingShown) {
@@ -210,7 +203,7 @@ async function runPrompt(promptId: string, vars: Record<string, string>, task = 
   aborter = a
   try {
     await a.promise
-    return true
+    return lib.current?.title === bookAtRun
   } catch (e) {
     error.value = (e as Error).message
     return false
@@ -294,15 +287,16 @@ const registering = ref('')
 
 async function registerStructure() {
   if (!lib.current || registering.value) return
+  const book = lib.current.title
   registering.value = '正在把角色卡 / 世界观登记到词典、境界、地图、关系图…'
   try {
-    const chars = await window.api.charactersReadAll(lib.current.title)
-    const settings = await window.api.fileRead(lib.current.title, '设定/世界观.md')
+    const chars = await window.api.charactersReadAll(book)
+    const settings = await window.api.fileRead(book, '设定/世界观.md')
     if (!chars.joined.trim() && !settings.trim()) {
       registering.value = ''
       return
     }
-    const src = `【角色卡】\n${chars.joined.slice(0, 30000)}\n\n【设定集】\n${settings.slice(0, 30000)}`
+    const src = `【角色卡】\n${chars.joined}\n\n【设定集】\n${settings}`
     const aborter = aiRun('workflow', 'wf-structure-extract', { source: src })
     const full = await aborter.promise
     const m = full.match(/\{[\s\S]*\}/)
@@ -310,8 +304,9 @@ async function registerStructure() {
       registering.value = '自动登记跳过：AI 未返回结构化数据（可在对话里让设定智能体补录）'
       return
     }
-    const payload = JSON.parse(m[0]) as Record<string, unknown>
-    const r = await window.api.structureRegister(lib.current.title, payload)
+    requireCurrentBook(book)
+    const payload = { ...JSON.parse(m[0]), origin: { kind: 'planning' } }
+    const r = await window.api.structureRegister(book, payload)
     const parts: string[] = []
     if ((r.dict ?? -1) >= 0) parts.push(`词典 ${r.dict} 条`)
     if ((r.realms ?? -1) >= 0) parts.push(`境界 ${r.realms} 级`)
@@ -361,138 +356,198 @@ function beatBrief(beat: string): string {
   return (body.join(' ') || lines.join(' ')).slice(0, 300)
 }
 
+const pendingText = ref('')
+const pendingReview = ref('')
+const reviewing = ref(false)
+let pendingLoadSeq = 0
+
+function requireCurrentBook(book: string) {
+  if (lib.current?.title !== book) throw new Error('作品已切换，本次操作已停止。')
+}
+
+async function saveWorkflow(book: string, workflow: typeof wf.value) {
+  const meta = await window.api.bookMetaWrite(book, { workflow: JSON.parse(JSON.stringify(workflow)) })
+  if (lib.current?.title === book) lib.current = meta as unknown as typeof lib.current
+}
+
+watch(() => `${lib.current?.title || ''}/${wf.value.pendingChapter?.draftPath || ''}`, async () => {
+  const seq = ++pendingLoadSeq
+  pendingText.value = ''
+  pendingReview.value = ''
+  const book = lib.current?.title
+  const pending = wf.value.pendingChapter
+  if (!book || !pending) return
+  const [text, review] = await Promise.all([
+    window.api.fileRead(book, pending.draftPath), window.api.fileRead(book, pending.reviewPath)
+  ])
+  if (seq !== pendingLoadSeq || lib.current?.title !== book) return
+  pendingText.value = text
+  pendingReview.value = review
+}, { immediate: true })
+
+/** 每次只产出一章候选。作者采用及交接成功后，才能启动下一章。 */
 async function generateChapters() {
-  if (!lib.current) return
-  paused.value = false
+  if (!lib.current || running.value || reviewing.value || wf.value.pendingChapter) return
+  const book = lib.current.title
+  const no = wf.value.chapterCursor
   const total = wf.value.chapterTotal
-  // 切书守卫：逐章生文常跑数小时，中途切书必须立即停，不许把生成内容写进另一本书
-  const bookAtStart = lib.current.title
+  if (no > total) return
+  paused.value = false
+  error.value = ''
+  liveChapter.value = no
   try {
-    while (!paused.value && wf.value.chapterCursor <= total) {
-    if (lib.current?.title !== bookAtStart) {
-      error.value = '已切换作品，逐章生文自动停止（原书进度已保存，切回后可继续）。'
-      break
-    }
-    const no = wf.value.chapterCursor
-    liveChapter.value = no
-    // 0. 细纲板存档优先：该章已有全文细纲（beatFull，智能体提交或上次生成落盘的）直接采用，不重新构思
-    let beat = ''
-    const registered = ((await window.api.outlineRead(lib.current.title)) as { no: number; beatFull?: string }[]).find(
-      (e) => e.no === no && typeof e.beatFull === 'string' && e.beatFull.trim()
-    )
-    if (registered) {
-      beat = registered.beatFull!.trim()
-      liveLabel.value = `第 ${no} 章 · 采用细纲板存档细纲`
-    } else {
-      // 1. 章节细纲：大纲可裁剪（按卷），角色卡/设定保持全量——策划阶段需要看全貌
-      liveLabel.value = `第 ${no} 章 · 构思细纲`
-      const beatCtx = await chapterContext('', no, total)
-      const okBeat = await runPrompt('wf-beat', {
-        chapterNo: String(no),
-        outline: beatCtx.outline,
-        settings: beatCtx.settings,
-        characters: beatCtx.characters,
-        prevSummary: no > 1 ? await chapterTail(no - 1) : '（这是第一章）',
-        chapterTotal: String(total),
-        memory: await memoryBlock()
-      }, 'structure')
-      // 生成失败/中止时断开：防止把半截细纲或半截正文当完整结果落盘
-      if (paused.value || !okBeat || !genText.value.trim()) break
-      beat = genText.value
-      // 细纲落盘：存入细纲板对应章节（幂等覆盖），title 取细纲首行标题，全文一并存档供下次直接采用
-      void window.api.outlineUpsert(lib.current.title, {
-        no,
-        title: beatTitle(beat),
-        beat: beatBrief(beat),
-        beatFull: beat,
-        status: '待写'
-      })
-    }
-    // 2. 正文：细纲定稿后按出场角色裁角色卡（词典匹配 + 主角强制保留），伏笔板全量注入
-    liveLabel.value = `第 ${no} 章 · 撰写正文`
-    const bodyCtx = await chapterContext(beat, no, total)
-    const okBody = await runPrompt('wf-chapter', {
-      chapterNo: String(no),
-      beat,
-      outline: bodyCtx.outline,
-      settings: bodyCtx.settings,
-      characters: bodyCtx.characters,
-      foreshadow: bodyCtx.foreshadow,
-      prevTail: no > 1 ? await chapterTail(no - 1) : '',
-      memory: await memoryBlock()
-    }, 'chapter')
-    if (paused.value || !okBody || !genText.value.trim()) break
-    // 3. 写盘并推进（已有内容的章节跳过不覆盖，保护手工润色稿）
     const rel = `正文/第${String(no).padStart(3, '0')}章.md`
-    const existing = await window.api.fileRead(lib.current.title, rel)
-    if (!existing.trim()) {
-      await window.api.fileWrite(lib.current.title, rel, genText.value)
-      await lib.refreshTree()
-    } else {
-      liveLabel.value = `第 ${no} 章 · 文件已存在，跳过写盘`
+    const baseContent = await window.api.fileRead(book, rel)
+    requireCurrentBook(book)
+    let beat = ''
+    const entries = await window.api.outlineRead(book) as { no: number; beatFull?: string }[]
+    requireCurrentBook(book)
+    beat = entries.find(e => e.no === no)?.beatFull?.trim() || ''
+    if (!beat) {
+      liveLabel.value = `第 ${no} 章 · 构思细纲`
+      const ctx = await chapterContext('', no, total, book)
+      requireCurrentBook(book)
+      const ok = await runPrompt('wf-beat', {
+        chapterNo: String(no), chapterTotal: String(total), ...ctx,
+        prevSummary: no > 1 ? await chapterTail(no - 1, book) : '（这是第一章）',
+        memory: await memoryBlock(book)
+      }, 'structure')
+      requireCurrentBook(book)
+      if (paused.value || !ok || !genText.value.trim()) return
+      beat = genText.value
+      await window.api.outlineUpsert(book, { no, title: beatTitle(beat), beat: beatBrief(beat), beatFull: beat, status: '待写' })
+      requireCurrentBook(book)
     }
-    // 3.5 章末登记 + 摘要（可开关）：登记员提取本章新专名/境界/关系/地图增量入库，diff 转人话摘要落盘；失败不阻塞生文
-    if (registerEnabled.value && genText.value.trim() && !paused.value) {
-      liveLabel.value = `第 ${no} 章 · 登记与摘要`
-      try {
-        const regAborter = aiRun('workflow', 'wf-structure-extract', { source: `【本章正文】\n${genText.value.slice(0, 30000)}` })
-        const full = await regAborter.promise
-        const m = full.match(/\{[\s\S]*\}/)
-        if (m) {
-          const reg = (await window.api.structureRegister(lib.current.title, JSON.parse(m[0]))) as Record<string, unknown>
-          await appendChapterSummary(no, beatTitle(beat), genText.value.replace(/\s/g, '').length, buildChapterSummary(reg))
-        }
-      } catch {
-        /* 登记失败不阻塞逐章生文 */
-      }
+    let body = baseContent
+    if (!body.trim()) {
+      liveLabel.value = `第 ${no} 章 · 撰写草稿`
+      const ctx = await chapterContext(beat, no, total, book)
+      requireCurrentBook(book)
+      const ok = await runPrompt('wf-chapter', {
+        chapterNo: String(no), beat, ...ctx, genre: lib.current!.genre,
+        targetWords: String(Math.round(estK.value * 1000)), viewpoint: lib.current!.viewpoint || '第三人称',
+        prevTail: no > 1 ? await chapterTail(no - 1, book) : '', memory: await memoryBlock(book)
+      }, 'chapter')
+      requireCurrentBook(book)
+      if (paused.value || !ok || !genText.value.trim()) return
+      body = genText.value
     }
-    const w = { ...wf.value, chapterCursor: no + 1 }
-    w.completed = [...(w.completed || [])]
-    w.completed[no] = true
-    await lib.saveMeta({ workflow: w, updatedAt: new Date().toISOString() })
-    // 细纲板同步完成状态
-    void window.api.outlineSetStatus(lib.current.title, no, '已写')
-    }
+    const draftPath = `草稿/第${String(no).padStart(3, '0')}章.md`
+    const reviewPath = `报告/第${String(no).padStart(3, '0')}章审查.md`
+    requireCurrentBook(book)
+    await window.api.fileWrite(book, draftPath, body)
+    requireCurrentBook(book)
+    await saveWorkflow(book, { ...plainWf(), pendingChapter: { no, draftPath, reviewPath, baseContent } })
+    requireCurrentBook(book)
+    pendingText.value = body
+    await reviewPending()
   } catch (e) {
-    // 任何一环出错都要显性报出来，不允许静默假死
-    error.value = `逐章生文中断：${(e as Error).message}（进度已保存，可点「继续生成」从断点重试）`
+    error.value = (e as Error).message
   } finally {
     paused.value = true
     liveLabel.value = ''
   }
 }
 
-async function chapterTail(no: number): Promise<string> {
-  const rel = `正文/第${String(no).padStart(3, '0')}章.md`
-  const text = await window.api.fileRead(lib.current!.title, rel)
-  return text.slice(-500)
+async function savePendingDraft() {
+  const book = lib.current?.title
+  const pending = wf.value.pendingChapter
+  if (!book || !pending || !pendingText.value.trim()) return
+  await window.api.fileWrite(book, pending.draftPath, pendingText.value)
 }
 
-/** 作者记忆块：全局 + 本书两层，注入 wf-beat / wf-chapter，让逐章生文遵守立过的规矩 */
-async function memoryBlock(): Promise<string> {
+async function reviewPending() {
+  const book = lib.current?.title
+  const pending = wf.value.pendingChapter
+  if (!book || !pending || reviewing.value) return
+  const body = pendingText.value
+  reviewing.value = true
+  error.value = ''
   try {
-    const fmt = (list: unknown): string =>
-      ((list as { text?: string }[]) || [])
-        .filter((e) => e && typeof e.text === 'string' && e.text.trim())
-        .map((e) => `- ${e.text!.trim()}`)
-        .join('\n')
-    const g = fmt(await window.api.memoryReadGlobal())
-    const b = lib.current ? fmt(await window.api.memoryReadBook(lib.current.title)) : ''
-    const parts = [g && `【全局记忆】\n${g}`, b && `【本书记忆】\n${b}`].filter(Boolean)
-    const out = parts.join('\n')
-    return out ? out.slice(0, 3000) : '（暂无）'
-  } catch {
-    return '（暂无）'
+    await window.api.fileWrite(book, pending.draftPath, body)
+    requireCurrentBook(book)
+    const ctx = await chapterContext('', pending.no, wf.value.chapterTotal, book)
+    requireCurrentBook(book)
+    liveLabel.value = `第 ${pending.no} 章 · 审查建议`
+    const ok = await runPrompt('wf-review', { ...ctx, input: body, memory: await memoryBlock(book) }, 'structure')
+    requireCurrentBook(book)
+    if (!ok || !genText.value.trim()) return
+    pendingReview.value = genText.value
+    await window.api.fileWrite(book, pending.reviewPath, pendingReview.value)
+    requireCurrentBook(book)
+    await saveWorkflow(book, { ...plainWf(), pendingChapter: { ...pending, reviewedContent: body } })
+  } catch (e) { error.value = (e as Error).message }
+  finally { reviewing.value = false; liveLabel.value = '' }
+}
+
+async function adoptPending(continueWriting = false) {
+  const book = lib.current?.title
+  const pending = wf.value.pendingChapter
+  if (!book || !pending || reviewing.value || running.value) return
+  const workflowAtStart = plainWf()
+  const body = pendingText.value
+  if (body !== pending.reviewedContent) {
+    error.value = '草稿尚未审查，或审查后已修改。请先更新审查建议。'
+    return
   }
+  reviewing.value = true
+  error.value = ''
+  try {
+    const rel = `正文/第${String(pending.no).padStart(3, '0')}章.md`
+    const adopted = await window.api.chapterAdopt(book, rel, pending.baseContent, body)
+    // 已保存正文的情况下即使后续失败，重试也以本次采用稿为基线，保护下一次人工修改。
+    await saveWorkflow(book, { ...workflowAtStart, pendingChapter: { ...pending, baseContent: body } })
+    requireCurrentBook(book)
+    if (registerEnabled.value) {
+      liveLabel.value = `第 ${pending.no} 章 · 资料交接`
+      const ok = await runPrompt('wf-structure-extract', { source: body }, 'workflow')
+      requireCurrentBook(book)
+      if (!ok) throw new Error('正文已采用，资料交接未完成。可以重试采用。')
+      const match = genText.value.match(/\{[\s\S]*\}/)
+      if (!match) throw new Error('正文已采用，但资料提取未返回有效结果。')
+      const reg = await window.api.structureRegister(book, {
+        ...JSON.parse(match[0]), origin: { kind: 'manuscript', rel, sha256: adopted.sha256, chapterNo: pending.no }
+      })
+      requireCurrentBook(book)
+      await appendChapterSummary(pending.no, beatTitle(body), body.replace(/\s/g, '').length, buildChapterSummary(reg), book)
+    }
+    requireCurrentBook(book)
+    await window.api.outlineSetStatus(book, pending.no, '已写')
+    requireCurrentBook(book)
+    const w = plainWf()
+    w.chapterCursor = pending.no + 1
+    w.completed[pending.no] = true
+    w.pendingChapter = null
+    await saveWorkflow(book, w)
+    requireCurrentBook(book)
+    pendingText.value = ''
+    pendingReview.value = ''
+    await lib.refreshTree()
+  } catch (e) { error.value = (e as Error).message }
+  finally { reviewing.value = false; liveLabel.value = '' }
+  if (continueWriting && !error.value && lib.current?.title === book) await generateChapters()
+}
+
+/** 前一章完整原文作衔接依据，容量不足时显性停止而非只留下尾部。 */
+async function chapterTail(no: number, book = lib.current!.title): Promise<string> {
+  return window.api.fileRead(book, `正文/第${String(no).padStart(3, '0')}章.md`)
+}
+
+/** 本书决定优先展示，两层记忆均完整保留。 */
+async function memoryBlock(book = lib.current?.title): Promise<string> {
+  const fmt = (list: { text?: string }[]) => list.filter(e => e?.text?.trim()).map(e => `- ${e.text!.trim()}`).join('\n')
+  const b = book ? fmt(await window.api.memoryReadBook(book)) : ''
+  const g = fmt(await window.api.memoryReadGlobal())
+  return [b && `【本书记忆】\n${b}`, g && `【全局记忆】\n${g}`].filter(Boolean).join('\n') || '（暂无）'
 }
 
 // ============ 保守版上下文裁剪（方案二）：大纲按卷切 + 角色卡按出场切，任何失败回退全量 ============
-const TRIM_KEY = 'inkdesk.wf.trim'
+const TRIM_KEY = 'novelgeneratetool.wf.trim'
 const trimEnabled = ref(localStorage.getItem(TRIM_KEY) !== '0')
 watch(trimEnabled, (v) => localStorage.setItem(TRIM_KEY, v ? '1' : '0'))
 
 // ============ 章末登记与摘要：每章写完资料登记员提取增量入库，diff 转人话摘要落盘 ============
-const REGISTER_KEY = 'inkdesk.wf.register'
+const REGISTER_KEY = 'novelgeneratetool.wf.register'
 const registerEnabled = ref(localStorage.getItem(REGISTER_KEY) !== '0')
 watch(registerEnabled, (v) => localStorage.setItem(REGISTER_KEY, v ? '1' : '0'))
 
@@ -511,16 +566,16 @@ function buildChapterSummary(reg: Record<string, unknown>): string {
 }
 
 /** 章末摘要落盘：报告/章末摘要.md 按章小节幂等覆盖 */
-async function appendChapterSummary(no: number, title: string, chars: number, summary: string) {
+async function appendChapterSummary(no: number, title: string, chars: number, summary: string, book: string) {
   try {
     const rel = '报告/章末摘要.md'
-    const old = await window.api.fileRead(lib.current!.title, rel).catch(() => '')
+    const old = await window.api.fileRead(book, rel).catch(() => '')
     const key = `## 第 ${String(no).padStart(3, '0')} 章`
     const date = new Date().toISOString().slice(5, 10)
     const section = `${key} ${title}\n\n${date} · 约 ${chars} 字\n\n${summary}\n\n`
     const re = new RegExp(`${key}[\\s\\S]*?(?=\\n## 第 |$)`)
     const next = re.test(old) ? old.replace(re, section) : (old ? old.replace(/\s*$/, '\n\n') : '') + section
-    await window.api.fileWrite(lib.current!.title, rel, next)
+    await window.api.fileWrite(book, rel, next)
   } catch {
     /* 摘要写失败不影响生文 */
   }
@@ -547,7 +602,7 @@ function sliceOutlineByVolume(outline: string, chapterNo: number, total: number)
       }
     }
     // 认不出就按总章数均匀估算
-    if (pick === -1) pick = Math.min(volCount - 1, Math.floor(((chapterNo - 1) / Math.max(1, total)) * volCount))
+    if (pick === -1) return outline // 不猜测卷范围，无法确认时保留全纲
     return `${head}\n${sections[pick].trim()}\n\n（其余卷内容已省略，只保留本卷大纲；跨卷情节以伏笔登记板为准）`
   } catch {
     return outline
@@ -555,18 +610,18 @@ function sliceOutlineByVolume(outline: string, chapterNo: number, total: number)
 }
 
 /** 角色卡按出场切（一人一档版）：文件名或卡内容命中词典人物/出场登记名 → 全文；未出场的卡折叠成一行备忘；零命中回退全量 */
-async function sliceCharactersByCast(files: { path: string; name: string; content: string }[], beat: string): Promise<string> {
+async function sliceCharactersByCast(files: { path: string; name: string; content: string }[], beat: string, book: string): Promise<string> {
   const joined = files.map((f) => f.content).join('\n\n')
   try {
     if (joined.length < 2500) return joined // 本来就短，不值得裁
-    const dict = ((await window.api.dictRead(lib.current.title)) as { term: string; aliases: string[]; category: string }[]) || []
+    const dict = ((await window.api.dictRead(book)) as { term: string; aliases: string[]; category: string }[]) || []
     const names = new Set<string>()
     for (const d of dict) {
       if (d.category !== '人物') continue
       for (const n of [d.term, ...(d.aliases || [])]) if (n && n.length >= 2 && beat.includes(n)) names.add(n)
     }
     // 出场追踪登记名也是匹配源（没进词典的老角色）
-    const tracks = ((await window.api.trackingRead(lib.current.title)) as { name: string }[]) || []
+    const tracks = ((await window.api.trackingRead(book)) as { name: string }[]) || []
     for (const t of tracks) if (t.name && t.name.length >= 2 && beat.includes(t.name)) names.add(t.name)
     if (!names.size) return joined
     const kept: string[] = []
@@ -574,7 +629,7 @@ async function sliceCharactersByCast(files: { path: string; name: string; conten
     for (let i = 0; i < files.length; i++) {
       const f = files[i]
       const sample = `${f.name}\n${f.content.slice(0, 400)}`
-      const isProtagonist = i === 0 || /主角/.test(sample.slice(0, 60)) // 主角卡强制保留（首位或卡内标注主角）
+      const isProtagonist = /主角/.test(sample.slice(0, 120)) // 主角卡强制保留（首位或卡内标注主角）
       const hit = isProtagonist || [...names].some((n) => sample.includes(n))
       if (hit) kept.push(f.content)
       else briefs.push(`${f.name}：未在本章出场（卡略）`)
@@ -587,25 +642,39 @@ async function sliceCharactersByCast(files: { path: string; name: string; conten
 }
 
 /** 生成单章上下文：trim 开启时裁大纲+角色卡，全量设定不动；伏笔登记板全量注入补盲区 */
-async function chapterContext(beat: string, chapterNo: number, total: number) {
-  const outlineFull = await loadOutline()
-  const settings = await window.api.fileRead(lib.current!.title, '设定/世界观.md')
-  const chars = await window.api.charactersReadAll(lib.current!.title)
+async function chapterContext(beat: string, chapterNo: number, total: number, book = lib.current!.title) {
+  const outlineFull = await window.api.fileRead(book, '大纲/大纲.md')
+  const tree = await window.api.treeList(book) as { path: string; dir: boolean; children?: unknown[] }[]
+  const paths: string[] = []
+  const walk = (nodes: typeof tree) => {
+    for (const node of nodes) {
+      if (node.dir) walk((node.children || []) as typeof tree)
+      else if (node.path.startsWith('设定/') && node.path.endsWith('.md')) paths.push(node.path)
+    }
+  }
+  walk(tree)
+  const settingParts = await Promise.all(paths.map(async path => `【${path}】\n${await window.api.fileRead(book, path)}`))
+  const customPanels = await window.api.panelsList(book) as { id: string; name: string; board?: string; hidden?: boolean }[]
+  for (const panel of customPanels.filter(panel => !panel.board && !panel.hidden)) {
+    settingParts.push(`【${panel.name}】\n${JSON.stringify(await window.api.panelsRead(book, panel.id))}`)
+  }
+  const settings = settingParts.join('\n\n')
+  const chars = await window.api.charactersReadAll(book)
   const out = { outline: outlineFull, settings, characters: chars.joined, foreshadow: '（伏笔登记板为空）' }
   if (trimEnabled.value) {
     try {
       out.outline = sliceOutlineByVolume(outlineFull, chapterNo, total)
-      out.characters = await sliceCharactersByCast(chars.files, beat)
+      out.characters = await sliceCharactersByCast(chars.files, beat, book)
     } catch {
       /* 裁剪失败保持全量 */
     }
   }
   try {
-    const fs = ((await window.api.foreshadowRead(lib.current!.title)) as { content: string; plantChapter: string; planRecycle: string; status: string }[]) || []
+    const fs = ((await window.api.foreshadowRead(book)) as { content: string; plantChapter: string; planRecycle: string; status: string }[]) || []
     const lines = fs
       .filter((f) => f.content?.trim())
       .map((f) => `· [${f.status}] ${f.content}${f.plantChapter ? `（埋于${f.plantChapter}）` : ''}${f.planRecycle ? `→ 计划回收：${f.planRecycle}` : ''}`)
-    if (lines.length) out.foreshadow = lines.join('\n').slice(0, 2500)
+    if (lines.length) out.foreshadow = lines.join('\n')
   } catch {
     /* 忽略 */
   }
@@ -618,7 +687,7 @@ function pauseChapters() {
 }
 
 async function resetWorkflow() {
-  const ok = await inkConfirm('确定重置工作流进度？', { detail: '已生成的文件不会删除。', confirmText: '重置' })
+  const ok = await toolConfirm('确定重置工作流进度？', { detail: '已生成的文件不会删除。', confirmText: '重置' })
   if (!ok) return
   lib.saveMeta({ workflow: { step: 0, chapterCursor: 1, chapterTotal: chapterTotal.value, completed: [] } })
 }
@@ -627,7 +696,7 @@ async function resetWorkflow() {
 <template>
   <div v-if="!lib.current" class="h-full flex flex-col items-center justify-center text-[var(--text-faint)] gap-4">
     <p>先在书架新建或打开一部作品，再使用工作流一键建书</p>
-    <InkButton @click="app.go('bookshelf')">去书架</InkButton>
+    <ToolButton @click="app.go('bookshelf')">去书架</ToolButton>
   </div>
 
   <div v-else class="h-full flex flex-col">
@@ -671,18 +740,18 @@ async function resetWorkflow() {
       <div v-if="cur === 0" class="max-w-3xl mx-auto space-y-4">
         <div>
           <div class="text-sm mb-1.5 text-[var(--text-dim)]">写下你的灵感（一句话、一段话都可以）</div>
-          <textarea v-model="stepInput" class="ink-textarea h-24" placeholder="例如：一个失忆的灯塔守护人，每晚梦到不属于自己的记忆…" />
+          <textarea v-model="stepInput" class="tool-textarea h-24" placeholder="例如：一个失忆的灯塔守护人，每晚梦到不属于自己的记忆…" />
         </div>
         <div class="flex items-center gap-2">
-          <InkButton :disabled="running || !stepInput.trim()" @click="runPrompt('wf-idea', { input: stepInput }, 'draft')">
+          <ToolButton :disabled="running || !stepInput.trim()" @click="runPrompt('wf-idea', { input: stepInput }, 'draft')">
             {{ running ? '生成中…' : 'AI 扩展灵感方案' }}
-          </InkButton>
-          <InkButton variant="ghost" :disabled="running" @click="skipStep">已有方案，跳过</InkButton>
+          </ToolButton>
+          <ToolButton variant="ghost" :disabled="running" @click="skipStep">已有方案，跳过</ToolButton>
         </div>
         <div v-if="genText">
           <div class="text-sm mb-1.5 text-[var(--text-dim)]">灵感方案（可修改）</div>
-          <textarea v-model="genText" class="ink-textarea h-72 text-[15px] leading-8" />
-          <div class="flex justify-end mt-3"><InkButton @click="confirmIdea">确认，进入大纲</InkButton></div>
+          <textarea v-model="genText" class="tool-textarea h-72 text-[15px] leading-8" />
+          <div class="flex justify-end mt-3"><ToolButton @click="confirmIdea">确认，进入大纲</ToolButton></div>
         </div>
       </div>
 
@@ -690,36 +759,36 @@ async function resetWorkflow() {
       <div v-else-if="cur >= 1 && cur <= 3" class="max-w-3xl mx-auto space-y-4">
         <div class="flex items-center gap-3 flex-wrap">
           <div class="flex items-center gap-2">
-            <InkButton
+            <ToolButton
               :disabled="running"
               @click="runStepGen"
             >
               {{ genText ? '重新生成' : 'AI 生成' }}{{ ['', '大纲', '角色卡', '设定集'][cur] }}
-            </InkButton>
-            <InkButton variant="ghost" :disabled="running" @click="skipStep">已有{{ ['', '大纲', '角色卡', '设定集'][cur] }}，跳过</InkButton>
+            </ToolButton>
+            <ToolButton variant="ghost" :disabled="running" @click="skipStep">已有{{ ['', '大纲', '角色卡', '设定集'][cur] }}，跳过</ToolButton>
           </div>
           <div v-if="cur === 1" class="flex items-center gap-2 flex-wrap text-sm text-[var(--text-dim)]">
             <span class="inline-flex items-center gap-1">
-              全书约 <input v-model.number="chapterTotal" type="number" min="4" max="2000" class="ink-input w-20 text-center py-1" /> 章
+              全书约 <input v-model.number="chapterTotal" type="number" min="4" max="2000" class="tool-input w-20 text-center py-1" /> 章
             </span>
             <span class="text-[11px] text-[var(--text-faint)]">或按字数估算：</span>
             <span class="inline-flex items-center gap-1 text-[12px]">
-              <input v-model.number="estWan" type="number" min="0" step="10" placeholder="300" class="ink-input w-16 text-center py-1" /> 万字
+              <input v-model.number="estWan" type="number" min="0" step="10" placeholder="300" class="tool-input w-16 text-center py-1" /> 万字
               <span class="text-[var(--text-faint)]">÷</span>
-              单章 <input v-model.number="estK" type="number" min="0.5" step="0.5" class="ink-input w-14 text-center py-1" /> 千字
+              单章 <input v-model.number="estK" type="number" min="0.5" step="0.5" class="tool-input w-14 text-center py-1" /> 千字
             </span>
           </div>
         </div>
         <div v-if="running" class="py-2 flex items-center gap-2 text-[12px] text-[var(--text-dim)]">
-          <span class="ink-dots"><span /><span /><span /></span>
+          <span class="tool-dots"><span /><span /><span /></span>
           <span>已用 {{ elapsed }} 秒{{ liveLabel ? ` · ${liveLabel}` : ' · 生成中' }}，推理模型思考期可能较长</span>
         </div>
         <div v-if="error" class="text-sm text-[#e08a7a]">{{ error }}</div>
         <div v-if="genText">
           <div class="text-sm mb-1.5 text-[var(--text-dim)]">{{ ['', '大纲', '角色卡', '设定集'][cur] }}（可修改）</div>
-          <textarea v-model="genText" class="ink-textarea h-[420px] text-[15px] leading-8" />
+          <textarea v-model="genText" class="tool-textarea h-[420px] text-[15px] leading-8" />
           <div class="flex justify-end mt-3">
-            <InkButton @click="[confirmOutline, confirmCharacters, confirmSettings][cur - 1]()">确认保存</InkButton>
+            <ToolButton @click="[confirmOutline, confirmCharacters, confirmSettings][cur - 1]()">确认保存</ToolButton>
           </div>
         </div>
       </div>
@@ -727,7 +796,7 @@ async function resetWorkflow() {
       <!-- Step 4 建书确认 -->
       <div v-else-if="cur === 4" class="max-w-3xl mx-auto space-y-5">
         <div class="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-6" style="box-shadow: var(--shadow)">
-          <div class="font-serif-ink text-lg mb-3">《{{ lib.current.title }}》书籍结构已就绪</div>
+          <div class="font-serif-tool text-lg mb-3">《{{ lib.current.title }}》书籍结构已就绪</div>
           <ul class="text-sm text-[var(--text-dim)] space-y-1.5">
             <li>· 大纲 / 大纲.md（{{ (existing[1] || wf.completed?.[1]) ? '已生成' : '未生成' }}）</li>
             <li>· 角色 / 一人一档（{{ (existing[2] || wf.completed?.[2]) ? '已生成' : '未生成' }}）</li>
@@ -736,17 +805,17 @@ async function resetWorkflow() {
           </ul>
           <p class="text-xs text-[var(--text-faint)] mt-3">前三章已按「黄金三章」规则设计：第一章抛出核心冲突与金手指，第二章放大危机，第三章给出第一次小高潮。</p>
         </div>
-        <InkButton @click="confirmCreate">完成建书，进入逐章生文</InkButton>
+        <ToolButton @click="confirmCreate">完成建书，进入逐章生文</ToolButton>
       </div>
 
       <!-- Step 5 逐章生文 -->
       <div v-else class="max-w-3xl mx-auto space-y-4">
         <div class="flex items-center gap-3 flex-wrap">
-          <InkButton v-if="paused" :disabled="running" @click="generateChapters">
+          <ToolButton v-if="paused" :disabled="running || reviewing || !!wf.pendingChapter || wf.chapterCursor > wf.chapterTotal" @click="generateChapters">
             <Play :size="14" /> {{ wf.chapterCursor > 1 ? `继续生成（第 ${wf.chapterCursor} 章起）` : '开始逐章生文' }}
-          </InkButton>
-          <InkButton v-else variant="ghost" @click="pauseChapters"><Pause :size="14" /> 暂停</InkButton>
-          <span class="text-sm text-[var(--text-dim)]">进度：{{ wf.chapterCursor - 1 }} / {{ wf.chapterTotal }} 章</span>
+          </ToolButton>
+          <ToolButton v-else variant="ghost" @click="pauseChapters"><Pause :size="14" /> 暂停</ToolButton>
+          <span class="text-sm text-[var(--text-dim)]">已采用：{{ wf.chapterCursor - 1 }} / {{ wf.chapterTotal }} 章</span>
           <button
             class="px-3 py-1 text-[11.5px] rounded-full cursor-pointer transition-colors border"
             :class="trimEnabled ? 'font-medium' : 'text-[var(--text-faint)]'"
@@ -771,12 +840,24 @@ async function resetWorkflow() {
           <div class="h-full rounded-full transition-all" :style="{ width: ((wf.chapterCursor - 1) / wf.chapterTotal) * 100 + '%', background: 'var(--accent)' }" />
         </div>
         <div v-if="registering" class="text-[12px] flex items-center gap-2" :style="{ color: 'var(--accent)' }">
-          <span v-if="registering.includes('…')" class="ink-dots"><span /><span /><span /></span>
+          <span v-if="registering.includes('…')" class="tool-dots"><span /><span /><span /></span>
           {{ registering }}
         </div>
         <div v-if="error" class="text-sm text-[#e08a7a]">{{ error }}</div>
-        <div v-if="genText" class="markdown-body rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 text-[15px] leading-8 max-h-[440px] overflow-y-auto" v-html="genHtml" />
-        <p class="text-xs text-[var(--text-faint)]">生成完成的章节自动写入「正文」目录，可在写作台继续修改。随时暂停，下次从断点继续。</p>
+        <div v-if="genText && !wf.pendingChapter" class="markdown-body rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 text-[15px] leading-8 max-h-[440px] overflow-y-auto" v-html="genHtml" />
+        <div v-if="wf.pendingChapter" class="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 space-y-3">
+          <div class="font-medium">第 {{ wf.pendingChapter.no }} 章 · 待审阅</div>
+          <textarea v-model="pendingText" :disabled="reviewing || running" class="tool-textarea h-[360px] text-[15px] leading-8" aria-label="待审草稿" />
+          <div class="flex gap-2 flex-wrap">
+            <ToolButton variant="ghost" :disabled="reviewing || running" @click="savePendingDraft">保存草稿</ToolButton>
+            <ToolButton variant="ghost" :disabled="reviewing || running" @click="reviewPending">更新审查建议</ToolButton>
+            <ToolButton :disabled="reviewing || running || pendingText !== wf.pendingChapter.reviewedContent" @click="adoptPending(false)">采用本章</ToolButton>
+            <ToolButton :disabled="reviewing || running || pendingText !== wf.pendingChapter.reviewedContent" @click="adoptPending(true)">采用并生成下一章</ToolButton>
+          </div>
+          <div v-if="pendingReview" class="markdown-body text-sm max-h-[280px] overflow-y-auto" v-html="renderMarkdown(pendingReview)" />
+          <p class="text-xs text-[var(--text-faint)]">审查建议用于定位问题。请连读确认人物、关键体验和事实，再决定是否采用。</p>
+        </div>
+        <p class="text-xs text-[var(--text-faint)]">新章节先保存到草稿，审查和作者采用后写入正文；资料交接完成后才能继续下一章。关闭后仍可恢复待审稿。</p>
       </div>
     </div>
   </div>

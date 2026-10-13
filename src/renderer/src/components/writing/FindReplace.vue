@@ -76,7 +76,7 @@ onMounted(() => void nextTick(() => findEl.value?.focus()))
     <input
       ref="findEl"
       v-model="find"
-      class="ink-input w-44 text-[12.5px]"
+      class="tool-input w-44 text-[12.5px]"
       placeholder="查找"
       @keydown="onKeydown"
     />
@@ -98,7 +98,7 @@ onMounted(() => void nextTick(() => findEl.value?.focus()))
       <ChevronDown :size="14" />
     </button>
 
-    <input v-model="replace" class="ink-input w-44 text-[12.5px] ml-2" placeholder="替换为" @keydown="onKeydown" />
+    <input v-model="replace" class="tool-input w-44 text-[12.5px] ml-2" placeholder="替换为" @keydown="onKeydown" />
 
     <button
       class="text-[11.5px] px-2 py-1 rounded cursor-pointer inline-flex items-center gap-1 text-[var(--text-dim)] hover:text-[var(--accent)] hover:bg-[var(--hover)] disabled:opacity-35"

@@ -19,7 +19,7 @@ export interface AppConfig {
   /** 服务商自带联网搜索开关 */
   providerSearch: Record<string, boolean>
   appearance: {
-    theme: 'dark' | 'ink-blue' | 'ink-green' | 'ink-purple' | 'light' | 'sepia' | 'moon' | 'celadon'
+    theme: 'dark' | 'blue' | 'green' | 'purple' | 'light' | 'sepia' | 'moon' | 'celadon'
     accent: string
     backgroundImage: string
     bgOpacity: number
@@ -54,7 +54,10 @@ export interface BookMeta {
   audience: string
   /** 书架分组；空串表示未分组 */
   group: string
-  workflow: { step: number; chapterCursor: number; chapterTotal: number; completed: boolean[] }
+  workflow: {
+    step: number; chapterCursor: number; chapterTotal: number; completed: boolean[]
+    pendingChapter?: { no: number; draftPath: string; reviewPath: string; baseContent: string; reviewedContent?: string } | null
+  }
 }
 
 // ============ 智能体会话 ============

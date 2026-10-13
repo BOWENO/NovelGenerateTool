@@ -53,7 +53,7 @@ function updateCaret() {
   if (!ed) return
   try {
     const coords = ed.view.coordsAtPos(ed.state.selection.to)
-    window.dispatchEvent(new CustomEvent('inkdesk:caret', { detail: { x: coords.left, y: coords.top } }))
+    window.dispatchEvent(new CustomEvent('novelgeneratetool:caret', { detail: { x: coords.left, y: coords.top } }))
     // 幽灵字定位
     if (props.ghost) ghostBox.value = { x: coords.left, y: coords.bottom + 6 }
     else ghostBox.value = null
@@ -163,13 +163,13 @@ const bubbleActions = [
   { key: 'polish', label: '润色' },
   { key: 'expand', label: '扩写' },
   { key: 'fix', label: '纠错' },
-  { key: 'deai', label: '去味' },
+  { key: 'deai', label: '修订' },
   { key: 'custom', label: '自定义…' }
 ]
 </script>
 
 <template>
-  <div v-if="editor" class="ink-editor relative h-full">
+  <div v-if="editor" class="tool-editor relative h-full">
     <BubbleMenu :editor="editor" :tippy-options="{ duration: 120 }">
       <div class="bubble-menu">
         <button v-for="a in bubbleActions" :key="a.key" @click="emit('selection-action', { action: a.key, text: getSelectionText() })">

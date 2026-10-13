@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAppStore } from '../store/app'
-import InkSegmented from './InkSegmented.vue'
+import ToolSegmented from './ToolSegmented.vue'
 
 /**
  * 二级导航行：所有页面的「标题下方那一行」统一高度、内边距与字号。
@@ -23,7 +23,7 @@ const app = useAppStore()
     :class="[dense ? 'h-11' : 'h-12', { 'focus-dim': app.focusMode }]"
   >
     <slot name="left">
-      <InkSegmented
+      <ToolSegmented
         v-if="tabs && tabs.length"
         :model-value="modelValue || ''"
         :options="tabs"

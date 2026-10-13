@@ -5,8 +5,8 @@ import { useAppStore } from '../store/app'
 import { useConversationStore } from '../store/conversation'
 import { aiRun } from '../ai'
 import { renderMarkdown } from '../ui/markdown'
-import InkButton from '../ui/InkButton.vue'
-import { inkConfirm } from '../ui/inkPrompt'
+import ToolButton from '../ui/ToolButton.vue'
+import { toolConfirm } from '../ui/toolPrompt'
 import { FileSearch, Play, Square, Trash2, FileText, FileUp, Sparkles, CircleCheck } from 'lucide-vue-next'
 
 const lib = useLibraryStore()
@@ -50,7 +50,7 @@ const DIM_LABEL: Record<string, string> = {
   reusable: '可复用套路（3-5 条，具体到怎么用）'
 }
 /** 自定义维度：作者想拆什么就拆什么（localStorage 持久化） */
-const CUSTOM_DIMS_KEY = 'inkdesk.deconstruct.dims'
+const CUSTOM_DIMS_KEY = 'novelgeneratetool.deconstruct.dims'
 const customDims = ref<string[]>((() => {
   try {
     return JSON.parse(localStorage.getItem(CUSTOM_DIMS_KEY) || '[]') as string[]
@@ -156,7 +156,7 @@ async function openReport(item: ReportItem) {
 }
 
 async function removeReport(item: ReportItem) {
-  const ok = await inkConfirm(`删除拆解报告「${item.name}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除拆解报告「${item.name}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   await window.api.fileDelete(lib.current!.title, item.path)
   if (activePath.value === item.path) {
@@ -278,7 +278,7 @@ watch(
         <p class="text-[12.5px]">先到书架打开一部作品，拆解报告才会存进它的资料里</p>
       </div>
 
-      <div v-else class="prose-ink max-w-[900px] mx-auto space-y-5 py-6">
+      <div v-else class="prose-tool max-w-[900px] mx-auto space-y-5 py-6">
         <!-- 新建拆解 -->
         <div class="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-5 space-y-4">
           <div class="flex items-center justify-between">
@@ -287,7 +287,7 @@ watch(
           </div>
 
           <div class="flex gap-2">
-            <input v-model="reportTitle" class="ink-input flex-1" placeholder="报告标题，如《诡秘之主》开篇（留空自动命名）" />
+            <input v-model="reportTitle" class="tool-input flex-1" placeholder="报告标题，如《诡秘之主》开篇（留空自动命名）" />
           </div>
 
           <div class="flex flex-wrap gap-1.5">
@@ -309,11 +309,11 @@ watch(
             <div class="flex gap-2">
               <input
                 v-model="newDim"
-                class="ink-input flex-1"
+                class="tool-input flex-1"
                 placeholder="如：金句密度 / 情绪线走向 / 章末钩子类型 / 反派出场方式…"
                 @keydown.enter="addCustomDim"
               />
-              <InkButton variant="ghost" :disabled="!newDim.trim()" @click="addCustomDim">添加</InkButton>
+              <ToolButton variant="ghost" :disabled="!newDim.trim()" @click="addCustomDim">添加</ToolButton>
             </div>
             <div v-if="customDims.length" class="flex flex-wrap gap-1.5">
               <span
@@ -337,7 +337,7 @@ watch(
           <!-- 补充要求 -->
           <div class="space-y-1.5">
             <div class="text-[11px] text-[var(--text-faint)]">补充要求（可选，随维度一起交给 AI）</div>
-            <textarea v-model="extraReq" class="ink-textarea h-16 text-[12.5px]" placeholder="例如：重点对比我的第一章和它的差距；只拆打斗场面的写法；用表格输出…" />
+            <textarea v-model="extraReq" class="tool-textarea h-16 text-[12.5px]" placeholder="例如：重点对比我的第一章和它的差距；只拆打斗场面的写法；用表格输出…" />
           </div>
 
           <!-- 拆解规模：章数越多越简略，10 章以下最精细 -->
@@ -355,20 +355,20 @@ watch(
                 {{ chapterCount === n ? '✓ ' : '' }}{{ n }} 章
               </button>
               <span class="text-[11px] text-[var(--text-faint)] ml-1">自定义</span>
-              <input v-model.number="chapterCount" type="number" min="1" max="100" class="ink-input w-16 text-center py-1" />
+              <input v-model.number="chapterCount" type="number" min="1" max="100" class="tool-input w-16 text-center py-1" />
               <span class="text-[11px] text-[var(--text-faint)]">{{ scaleText.split('：')[1] || '' }}</span>
             </div>
           </div>
 
           <textarea
             v-model="sourceText"
-            class="ink-textarea h-56 text-[13px]"
+            class="tool-textarea h-56 text-[13px]"
             placeholder="粘贴竞品文本，或点上方「导入文件」直接选 TXT/MD（自动识别 GBK 编码）。报告只依据这段文本，结论会附原文证据。"
           />
           <div class="flex items-center gap-3 flex-wrap">
-            <InkButton variant="ghost" :disabled="running" @click="importSource"><FileUp :size="13" /> 导入文件</InkButton>
-            <InkButton :disabled="!canStart" @click="start"><Play :size="13" /> 开始拆解</InkButton>
-            <InkButton v-if="running" variant="ghost" @click="stop"><Square :size="12" /> 停止</InkButton>
+            <ToolButton variant="ghost" :disabled="running" @click="importSource"><FileUp :size="13" /> 导入文件</ToolButton>
+            <ToolButton :disabled="!canStart" @click="start"><Play :size="13" /> 开始拆解</ToolButton>
+            <ToolButton v-if="running" variant="ghost" @click="stop"><Square :size="12" /> 停止</ToolButton>
             <span class="text-[11px] text-[var(--text-faint)]">已载入 {{ sourceChars }} 字 · 拆 {{ chapterCount }} 章 · 已选 {{ pickedCount }} 个维度</span>
           </div>
           <div v-if="error" class="text-sm text-[#e08a7a]">{{ error }}</div>
@@ -401,7 +401,7 @@ watch(
 
         <p class="text-[11px] text-[var(--text-faint)] leading-5">
           拆解完成会自动存进本书「拆书/」目录，并同步沉淀到素材库的「拆书报告」分组；点报告上方的「提炼为写作技巧」可让资源管家把可复用套路抽成技能条目。
-          想要更深入的交互式拆解（追问、对照自己的大纲），可以在「妙笔」里找拆书智能体，把同样的文本粘贴给它。
+          想要更深入的交互式拆解（追问、对照自己的大纲），可以在「创作助手」里找拆书智能体，把同样的文本粘贴给它。
         </p>
       </div>
     </div>

@@ -15,11 +15,11 @@ export const VIEW_TITLES: Record<ViewName, string> = {
   materials: '资料',
   library: '资源库',
   agentlab: '智能体库',
-  assistant: '妙笔',
+  assistant: '创作助手',
   settings: '设置'
 }
 
-const GROUP_STATE_KEY = 'inkdesk.navGroups'
+const GROUP_STATE_KEY = 'novelgeneratetool.navGroups'
 
 /** 背景图 data URL 缓存（键为图片路径；选图时主进程生成唯一文件名，换图不会命中旧缓存） */
 const bgDataCache = new Map<string, string>()
@@ -64,7 +64,7 @@ interface State {
   /** 资料区「角色」板块的子视图（资料 / 关系图）：goMaterials('关系图') 时指定 */
   charSubView: string
   libraryTab: string | null
-  /** 写作台右栏当前标签（智能体 / 去 AI 味 / 资料速览），供其他页面跳转时指定 */
+  /** 写作台右栏当前标签（智能体 / 风格检查 / 资料速览），供其他页面跳转时指定 */
   writingRightTab: string
   /** 设置页当前分组（记忆库等快捷入口可直达指定分组） */
   settingsTab: string
@@ -229,7 +229,7 @@ export const useAppStore = defineStore('app', {
       this.go('library')
     },
 
-    /** 从其他页面把一项任务交给智能体：切到妙笔页（AI 工作台） */
+    /** 从其他页面把一项任务交给智能体：切到创作助手页（AI 工作台） */
     goAskAgent() {
       this.go('assistant')
     }

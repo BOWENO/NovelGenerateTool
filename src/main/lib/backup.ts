@@ -3,8 +3,8 @@ import { join, basename, normalize, sep } from 'path'
 import { getLibraryRoot } from './library'
 
 /**
- * 保存与备份：把整本书（含 .inkdesk 会话与历史）复制到备份目录。
- * 备份目录默认在书架旁的「墨案备份」，可在设置中修改；支持手动备份与退出时自动备份。
+ * 保存与备份：把整本书（含 .novelgeneratetool 会话与历史）复制到备份目录。
+ * 备份目录默认在书架旁的「NovelGenerateTool备份」，可在设置中修改；支持手动备份与退出时自动备份。
  */
 
 export interface BackupItem {
@@ -15,7 +15,7 @@ export interface BackupItem {
 }
 
 function defaultBackupDir(): string {
-  return join(getLibraryRoot(), '..', 'DAWO 备份')
+  return join(getLibraryRoot(), '..', 'NovelGenerateTool 备份')
 }
 
 export function backupDir(configured?: string): string {

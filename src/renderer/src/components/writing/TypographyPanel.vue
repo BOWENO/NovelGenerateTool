@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import InkButton from '../../ui/InkButton.vue'
-import InkSelect from '../../ui/InkSelect.vue'
+import ToolButton from '../../ui/ToolButton.vue'
+import ToolSelect from '../../ui/ToolSelect.vue'
 
 /** 排版状态由写作台持有（编辑器容器要读同一份），面板直接改属性 + 通知持久化 */
 const props = defineProps<{ typo: { fs: number; lh: number; measure: number; font: string; paraGap: boolean; grid: string } }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
-const KEY = 'inkdesk.typography'
+const KEY = 'novelgeneratetool.typography'
 const DEFAULTS = { fs: 16, lh: 2, measure: 720, font: 'default', paraGap: false, grid: 'none' }
 
 const saved = ref(false)
@@ -38,13 +38,13 @@ const fontStack = computed(() =>
 
 /** 写作台消费的 CSS 变量集合 */
 const vars = computed(() => ({
-  '--ink-fs': `${props.typo.fs}px`,
-  '--ink-lh': String(props.typo.lh),
-  '--ink-measure': `${props.typo.measure}px`,
-  '--ink-font': fontStack.value,
-  '--ink-para': props.typo.paraGap ? '1.6em' : '1em'
+  '--tool-fs': `${props.typo.fs}px`,
+  '--tool-lh': String(props.typo.lh),
+  '--tool-measure': `${props.typo.measure}px`,
+  '--tool-font': fontStack.value,
+  '--tool-para': props.typo.paraGap ? '1.6em' : '1em'
 }))
-const gridClass = computed(() => (props.typo.grid === 'solid' ? 'ink-grid-solid' : props.typo.grid === 'dash' ? 'ink-grid-dash' : ''))
+const gridClass = computed(() => (props.typo.grid === 'solid' ? 'tool-grid-solid' : props.typo.grid === 'dash' ? 'tool-grid-dash' : ''))
 
 function reset() {
   Object.assign(props.typo, DEFAULTS)
@@ -71,7 +71,7 @@ defineExpose({ vars, gridClass })
       </div>
       <div>
         <div class="text-[12px] text-[var(--text-dim)] mb-1.5">字体</div>
-        <InkSelect v-model="typo.font" class="w-full" :options="FONTS.map((f) => ({ label: f.label, value: f.v }))" @change="persist" />
+        <ToolSelect v-model="typo.font" class="w-full" :options="FONTS.map((f) => ({ label: f.label, value: f.v }))" @change="persist" />
       </div>
     </div>
 
@@ -96,7 +96,7 @@ defineExpose({ vars, gridClass })
     </div>
 
     <div class="flex items-center justify-between pt-1">
-      <InkButton variant="ghost" @click="reset">重置为默认</InkButton>
+      <ToolButton variant="ghost" @click="reset">重置为默认</ToolButton>
       <span v-if="saved" class="text-[11.5px] ok-pulse" style="color: var(--accent)">已应用</span>
     </div>
   </div>

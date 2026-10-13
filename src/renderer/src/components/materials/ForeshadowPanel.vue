@@ -3,8 +3,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
 import { useAppStore } from '../../store/app'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { Plus, Trash2, WandSparkles } from 'lucide-vue-next'
 import type { ForeshadowEntry, ForeshadowStatus } from '../../types'
 
@@ -68,7 +68,7 @@ function addEntry() {
 async function removeEntry(id: string) {
   const e = entries.value.find((x) => x.id === id)
   if (!e) return
-  const ok = await inkConfirm(`删除伏笔「${e.content.slice(0, 20)}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除伏笔「${e.content.slice(0, 20)}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   entries.value = entries.value.filter((x) => x.id !== id)
   if (selectedId.value === id) selectedId.value = entries.value[0]?.id || ''
@@ -78,7 +78,7 @@ async function removeEntry(id: string) {
 /** 交给智能体：从正文里排查伏笔埋设与回收情况（走写入提案） */
 async function askAgent() {
   if (!lib.current) return
-  app.goAskAgent() // 切到妙笔页，用户能直接看到流式生成
+  app.goAskAgent() // 切到创作助手页，用户能直接看到流式生成
   const { useConversationStore } = await import('../../store/conversation')
   const conv = useConversationStore()
   await conv.askWith(
@@ -92,8 +92,8 @@ function onFileChanged(e: Event) {
   const p = (e as CustomEvent<{ path?: string }>).detail?.path
   if (p === '伏笔登记.json') void load()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 watch(book, () => void load())
 onMounted(() => void load())
@@ -158,25 +158,25 @@ onMounted(() => void load())
         <div v-else class="max-w-xl space-y-4">
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">伏笔内容</div>
-            <textarea v-model="selected.content" rows="2" class="ink-textarea" placeholder="埋了什么钩子、读者看到了什么" @change="persist" />
+            <textarea v-model="selected.content" rows="2" class="tool-textarea" placeholder="埋了什么钩子、读者看到了什么" @change="persist" />
           </div>
           <div class="flex gap-3">
             <div class="flex-1">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">埋设章节</div>
-              <input v-model="selected.plantChapter" class="ink-input" placeholder="正文/第003章" @change="persist" />
+              <input v-model="selected.plantChapter" class="tool-input" placeholder="正文/第003章" @change="persist" />
             </div>
             <div class="w-36 shrink-0">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">状态</div>
-              <InkSelect v-model="selected.status" class="w-full" :options="STATUSES.map((s) => ({ label: s, value: s }))" @change="persist" />
+              <ToolSelect v-model="selected.status" class="w-full" :options="STATUSES.map((s) => ({ label: s, value: s }))" @change="persist" />
             </div>
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">计划回收点（可空）</div>
-            <input v-model="selected.planRecycle" class="ink-input" placeholder="正文/第020章，或「决战时揭晓」" @change="persist" />
+            <input v-model="selected.planRecycle" class="tool-input" placeholder="正文/第020章，或「决战时揭晓」" @change="persist" />
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">备注</div>
-            <textarea v-model="selected.note" rows="4" class="ink-textarea" placeholder="回收方式、关联线索、注意事项" @change="persist" />
+            <textarea v-model="selected.note" rows="4" class="tool-textarea" placeholder="回收方式、关联线索、注意事项" @change="persist" />
           </div>
         </div>
       </div>

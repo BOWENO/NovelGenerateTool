@@ -5,7 +5,7 @@ import { useLibraryStore } from './store/library'
 import GlowCursor from './ui/GlowCursor.vue'
 import FloatingOrbs from './ui/FloatingOrbs.vue'
 import CursorParticles from './ui/CursorParticles.vue'
-import InkPromptHost from './ui/InkPromptHost.vue'
+import ToolPromptHost from './ui/ToolPromptHost.vue'
 import AppHeader from './ui/AppHeader.vue'
 import AppNav from './ui/AppNav.vue'
 import HomeView from './views/HomeView.vue'
@@ -18,13 +18,13 @@ import LibraryView from './views/LibraryView.vue'
 import AgentLabView from './views/AgentLabView.vue'
 import AssistantView from './views/AssistantView.vue'
 import SettingsView from './views/SettingsView.vue'
-import { setupInkUi } from './ui/inkTooltip'
+import { setupToolUi } from './ui/toolTooltip'
 
 const app = useAppStore()
 const lib = useLibraryStore()
 
 onMounted(async () => {
-  setupInkUi()
+  setupToolUi()
   await app.loadConfig()
   await lib.loadBooks()
   if (app.config?.activeBook) {
@@ -38,7 +38,7 @@ onMounted(async () => {
   <FloatingOrbs />
   <GlowCursor />
   <CursorParticles />
-  <InkPromptHost />
+  <ToolPromptHost />
 
   <div class="relative z-10 flex flex-col h-full">
     <!-- 全局顶部栏 -->

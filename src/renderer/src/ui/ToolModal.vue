@@ -23,7 +23,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           style="max-height: 82vh"
         >
           <div class="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
-            <div class="font-serif-ink text-base">{{ title }}</div>
+            <div class="font-serif-tool text-base">{{ title }}</div>
             <button class="text-[var(--text-dim)] hover:text-[var(--text)] cursor-pointer px-2" @click="emit('close')">✕</button>
           </div>
           <div class="p-5 overflow-y-auto">

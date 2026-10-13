@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync
 import { join } from 'path'
 import { getLibraryRoot } from './library'
 
-/** 智能体会话持久化：存于作品目录 .inkdesk/conversations/ 下（不随书架列表展示） */
+/** 智能体会话持久化：存于作品目录 .novelgeneratetool/conversations/ 下（不随书架列表展示） */
 
 export interface ConversationSummary {
   id: string
@@ -26,7 +26,7 @@ export interface StoredConversation {
 }
 
 function dirFor(book: string): string {
-  const dir = join(getLibraryRoot(), book, '.inkdesk', 'conversations')
+  const dir = join(getLibraryRoot(), book, '.novelgeneratetool', 'conversations')
   mkdirSync(dir, { recursive: true })
   return dir
 }

@@ -4,7 +4,7 @@ import { useAppStore, type ViewName } from '../store/app'
 import { useLibraryStore } from '../store/library'
 import { useLibrariesStore } from '../store/libraries'
 import { usePanelDrag } from './usePanelDrag'
-import dawoLogo from '../assets/dawo-logo.png'
+import novelgeneratetoolLogo from '../assets/novelgeneratetool-logo.svg'
 import type { LibKind } from '../types'
 import {
   BookOpen,
@@ -60,7 +60,7 @@ function onPanelsChanged() {
 }
 onMounted(() => {
   void refreshCustomPanels()
-  window.addEventListener('inkdesk:panels-changed', onPanelsChanged)
+  window.addEventListener('novelgeneratetool:panels-changed', onPanelsChanged)
 })
 
 /** 侧栏可拖拽调宽（范围限制，防止挤没主区域） */
@@ -168,9 +168,9 @@ onMounted(() => void libs.refresh())
     <div class="panel-resizer right-0" :class="{ 'is-dragging': navDrag.dragging.value }" @mousedown="navDrag.onDown($event, 1)" />
     <!-- 品牌 -->
     <div class="px-4 pt-4 pb-3 flex items-center gap-2.5">
-      <img :src="dawoLogo" alt="DAWO" class="w-10 h-10 rounded-lg shrink-0" draggable="false" />
+      <img :src="novelgeneratetoolLogo" alt="NovelGenerateTool" class="w-10 h-10 rounded-lg shrink-0" draggable="false" />
       <div>
-        <div class="font-serif-ink text-[20px] tracking-wide leading-6" style="color: var(--accent)">DAWO</div>
+        <div class="font-serif-tool text-[13px] tracking-tight leading-6" style="color: var(--accent)">NovelGenerateTool</div>
         <div class="text-[9.5px] text-[var(--text-faint)] tracking-[0.28em]">AI 小说工作台</div>
       </div>
     </div>
@@ -187,7 +187,7 @@ onMounted(() => void libs.refresh())
         <span>首页</span>
       </button>
 
-      <!-- 妙笔是高频入口，常驻顶部，不参与滚动 -->
+      <!-- 创作助手是高频入口，常驻顶部，不参与滚动 -->
       <button
         class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] cursor-pointer transition-colors"
         :class="app.view === 'assistant' ? 'bg-[var(--panel-2)] font-medium' : 'text-[var(--text-dim)] hover:bg-[var(--hover)]'"
@@ -195,7 +195,7 @@ onMounted(() => void libs.refresh())
         @click="app.go('assistant')"
       >
         <UserRound :size="14" class="shrink-0" />
-        <span>妙笔</span>
+        <span>创作助手</span>
         <span class="text-[10.5px] text-[var(--text-faint)] ml-auto">AI 助手</span>
       </button>
     </div>

@@ -2,7 +2,7 @@
 /** 通用自定义列表面板（阶段二）：按注册表字段定义渲染条目卡片，防抖自动保存 */
 import { onUnmounted, ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
-import { inkConfirm } from '../../ui/inkPrompt'
+import { toolConfirm } from '../../ui/toolPrompt'
 import { Plus, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{ panelId: string }>()
@@ -79,7 +79,7 @@ function addEntry() {
 }
 
 async function removeEntry(i: number) {
-  const ok = await inkConfirm('删除这一条？', { confirmText: '删除', danger: true })
+  const ok = await toolConfirm('删除这一条？', { confirmText: '删除', danger: true })
   if (!ok) return
   entries.value.splice(i, 1)
   scheduleSave()
@@ -87,11 +87,11 @@ async function removeEntry(i: number) {
 
 async function removePanel() {
   if (!lib.current || !inst.value) return
-  const ok = await inkConfirm(`删除自定义面板「${inst.value.name}」及其全部条目？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除自定义面板「${inst.value.name}」及其全部条目？`, { confirmText: '删除', danger: true })
   if (!ok) return
   await window.api.panelsRemove(lib.current.title, inst.value.id)
   // 广播面板集合变化，左栏导航同步移除
-  window.dispatchEvent(new CustomEvent('inkdesk:panels-changed'))
+  window.dispatchEvent(new CustomEvent('novelgeneratetool:panels-changed'))
   emit('removed', inst.value.id)
 }
 
@@ -104,7 +104,7 @@ onUnmounted(() => {
 <template>
   <div class="h-full flex flex-col">
     <div class="h-11 shrink-0 flex items-center gap-2 px-6 border-b border-[var(--border)]">
-      <span class="font-serif-ink text-[13.5px]" :style="{ color: 'var(--accent)' }">{{ inst?.name || '…' }}</span>
+      <span class="font-serif-tool text-[13.5px]" :style="{ color: 'var(--accent)' }">{{ inst?.name || '…' }}</span>
       <span class="text-[11px] text-[var(--text-faint)]">自定义面板 · {{ entries.length }} 条</span>
       <div class="flex-1" />
       <button class="text-[11.5px] flex items-center gap-1 text-[var(--text-faint)] hover:text-[#e08a7a] cursor-pointer" @click="removePanel">
@@ -132,10 +132,10 @@ onUnmounted(() => {
             <textarea
               v-if="f.type === 'longtext'"
               v-model="e[f.key]"
-              class="ink-textarea h-20 text-[13px] leading-6"
+              class="tool-textarea h-20 text-[13px] leading-6"
               @input="scheduleSave"
             />
-            <input v-else v-model="e[f.key]" class="ink-input text-[13px]" @input="scheduleSave" />
+            <input v-else v-model="e[f.key]" class="tool-input text-[13px]" @input="scheduleSave" />
           </div>
         </div>
 

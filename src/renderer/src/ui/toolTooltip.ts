@@ -1,7 +1,7 @@
 /**
  * 全局 UI 增强（App.vue 挂载一次）：
  * 1. 暗色悬浮提示——替换原生 title 的白底黑字系统框：hover 带 title 的元素 350ms 后
- *    显示自绘提示；原 title 暂存到 data-ink-tip，移开时还原，元素离开 DOM 也安全。
+ *    显示自绘提示；原 title 暂存到 data-tool-tip，移开时还原，元素离开 DOM 也安全。
  * 2. 滑条填充——监听所有 input[type=range]，把当前值写成 --fill 百分比，
  *    CSS 据此把轨道左侧染成强调色（纯 CSS 无法按值填充）。
  */
@@ -13,7 +13,7 @@ let showTimer: ReturnType<typeof setTimeout> | null = null
 function ensureTipEl(): HTMLDivElement {
   if (!tipEl) {
     tipEl = document.createElement('div')
-    tipEl.id = 'ink-tip'
+    tipEl.id = 'tool-tip'
     tipEl.style.cssText = [
       'position: fixed',
       'z-index: 95',
@@ -54,7 +54,7 @@ function placeTip(el: Element) {
 
 function showTip(el: Element) {
   const tip = ensureTipEl()
-  tip.textContent = el.getAttribute('data-ink-tip') || ''
+  tip.textContent = el.getAttribute('data-tool-tip') || ''
   placeTip(el)
   tip.style.opacity = '1'
   tip.style.transform = 'translateY(0)'
@@ -74,10 +74,10 @@ function onMouseOver(e: MouseEvent) {
   // 换目标：先还原上一个的 title
   hideTip()
   if (curEl) {
-    const back = curEl.getAttribute('data-ink-tip')
+    const back = curEl.getAttribute('data-tool-tip')
     if (back !== null) {
       curEl.setAttribute('title', back)
-      curEl.removeAttribute('data-ink-tip')
+      curEl.removeAttribute('data-tool-tip')
     }
   }
   curEl = null
@@ -86,7 +86,7 @@ function onMouseOver(e: MouseEvent) {
   curEl = el
   const title = el.getAttribute('title')
   if (title === null || !title.trim()) return
-  el.setAttribute('data-ink-tip', title)
+  el.setAttribute('data-tool-tip', title)
   el.removeAttribute('title')
   showTimer = setTimeout(() => {
     if (curEl === el) showTip(el)
@@ -100,10 +100,10 @@ function onUnhover() {
   }
   hideTip()
   if (curEl) {
-    const back = curEl.getAttribute('data-ink-tip')
+    const back = curEl.getAttribute('data-tool-tip')
     if (back !== null) {
       curEl.setAttribute('title', back)
-      curEl.removeAttribute('data-ink-tip')
+      curEl.removeAttribute('data-tool-tip')
     }
     curEl = null
   }
@@ -122,7 +122,7 @@ function onInput(e: Event) {
   if (t.tagName === 'INPUT' && t.type === 'range') updateRangeFill(t)
 }
 
-export function setupInkUi(): void {
+export function setupToolUi(): void {
   // 悬浮提示委托
   document.addEventListener('mouseover', onMouseOver, true)
   document.addEventListener('mouseout', onUnhover, true)

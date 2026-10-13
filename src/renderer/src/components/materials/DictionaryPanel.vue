@@ -3,8 +3,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
 import { useAppStore } from '../../store/app'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { Plus, Trash2, WandSparkles, Map as MapIcon } from 'lucide-vue-next'
 import type { BookMap } from '../../types'
 
@@ -72,7 +72,7 @@ function addEntry() {
 async function removeEntry(id: string) {
   const e = entries.value.find((x) => x.id === id)
   if (!e) return
-  const ok = await inkConfirm(`删除词条「${e.term}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除词条「${e.term}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   entries.value = entries.value.filter((x) => x.id !== id)
   if (selectedId.value === id) selectedId.value = entries.value[0]?.id || ''
@@ -82,7 +82,7 @@ async function removeEntry(id: string) {
 /** 交给智能体：从正文提取专有名词登记入册（走写入提案） */
 async function askAgent() {
   if (!lib.current) return
-  app.goAskAgent() // 切到妙笔页，用户能直接看到流式生成
+  app.goAskAgent() // 切到创作助手页，用户能直接看到流式生成
   const { useConversationStore } = await import('../../store/conversation')
   const conv = useConversationStore()
   await conv.askWith(
@@ -125,8 +125,8 @@ function onFileChanged(e: Event) {
   const p = (e as CustomEvent<{ path?: string }>).detail?.path
   if (p === '专名词典.json') void load()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 watch(book, () => void load())
 onMounted(() => void load())
@@ -200,24 +200,24 @@ onMounted(() => void load())
           <div class="flex gap-3">
             <div class="flex-1">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">专名</div>
-              <input v-model="selected.term" class="ink-input" placeholder="如：青云剑诀" @change="persist" />
+              <input v-model="selected.term" class="tool-input" placeholder="如：青云剑诀" @change="persist" />
             </div>
             <div class="w-40 shrink-0">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">类别</div>
-              <InkSelect v-model="selected.category" class="w-full" :options="CATEGORIES.map((c) => ({ label: c, value: c }))" @change="persist" />
+              <ToolSelect v-model="selected.category" class="w-full" :options="CATEGORIES.map((c) => ({ label: c, value: c }))" @change="persist" />
             </div>
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">别名 / 旧称（顿号分隔）</div>
-            <input :value="selected.aliases.join('、')" class="ink-input" placeholder="如：青莲剑歌、青云诀" @change="onAliasChange" />
+            <input :value="selected.aliases.join('、')" class="tool-input" placeholder="如：青莲剑歌、青云诀" @change="onAliasChange" />
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">首次出场章节（可空）</div>
-            <input v-model="selected.firstChapter" class="ink-input" placeholder="正文/第003章" @change="persist" />
+            <input v-model="selected.firstChapter" class="tool-input" placeholder="正文/第003章" @change="persist" />
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">设定说明</div>
-            <textarea v-model="selected.desc" rows="5" class="ink-textarea" placeholder="它是什么、有什么规则、和谁有关联" @change="persist" />
+            <textarea v-model="selected.desc" rows="5" class="tool-textarea" placeholder="它是什么、有什么规则、和谁有关联" @change="persist" />
           </div>
         </div>
       </div>

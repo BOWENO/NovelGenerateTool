@@ -2,7 +2,7 @@
 import { computed, onActivated, ref, watch } from 'vue'
 import { useAppStore } from '../store/app'
 import { useLibraryStore } from '../store/library'
-import InkButton from '../ui/InkButton.vue'
+import ToolButton from '../ui/ToolButton.vue'
 import MdPanel from '../components/materials/MdPanel.vue'
 import TimelinePanel from '../components/materials/TimelinePanel.vue'
 import StorylinePanel from '../components/materials/StorylinePanel.vue'
@@ -35,7 +35,7 @@ async function refreshCustom() {
     const list = (await window.api.panelsList(lib.current.title)) as { id: string; name: string; board?: string; hidden?: boolean }[]
     customPanels.value = list.filter((p) => !p.board && !p.hidden).map((p) => ({ key: p.name, label: p.name }))
     // 广播面板集合变化：左栏导航 / 写作台右栏等常驻组件同步刷新
-    window.dispatchEvent(new CustomEvent('inkdesk:panels-changed'))
+    window.dispatchEvent(new CustomEvent('novelgeneratetool:panels-changed'))
   } catch {
     customPanels.value = []
   }
@@ -84,7 +84,7 @@ const AGENT_OF: Record<string, string> = { 大纲: 'outline', 角色: 'character
 <template>
   <div v-if="!lib.current" class="h-full flex flex-col items-center justify-center text-[var(--text-faint)] gap-4">
     <p>先打开一部作品</p>
-    <InkButton @click="app.go('bookshelf')">去书架</InkButton>
+    <ToolButton @click="app.go('bookshelf')">去书架</ToolButton>
   </div>
 
   <div v-else class="h-full flex">

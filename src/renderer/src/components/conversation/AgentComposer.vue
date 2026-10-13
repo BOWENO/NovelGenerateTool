@@ -5,7 +5,7 @@ import { useConversationStore } from '../../store/conversation'
 import { useLibrariesStore } from '../../store/libraries'
 import { useLibraryStore } from '../../store/library'
 import type { LibEntry, LibKind } from '../../types'
-import InkSegmented from '../../ui/InkSegmented.vue'
+import ToolSegmented from '../../ui/ToolSegmented.vue'
 import { CREATIVE_LEVELS, THINKING_LEVELS, levelToTemp, tempToLevel } from '../../ui/writingScale'
 import { ArrowUp, Square, Paperclip, Sparkles, BookOpen, Settings2, X, Search, Lightbulb, Users, Image as ImageIcon } from 'lucide-vue-next'
 
@@ -367,7 +367,7 @@ async function toggleApproval() {
         <input
           v-model="pickQuery"
           class="flex-1 bg-transparent outline-none text-[12px]"
-          :placeholder="pickMode === 'skill' ? '搜索技能（黄金三章 / 去 AI 味 / 弧光…）' : pickMode === 'note' ? '搜索灵感便签' : '搜索素材'"
+          :placeholder="pickMode === 'skill' ? '搜索技能（黄金三章 / 风格检查 / 弧光…）' : pickMode === 'note' ? '搜索灵感便签' : '搜索素材'"
           autofocus
         />
         <button class="text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] cursor-pointer" @click="pickMode = ''">关闭</button>
@@ -398,11 +398,11 @@ async function toggleApproval() {
       </div>
       <div>
         <div class="text-[11px] text-[var(--text-dim)] mb-1.5">思考程度</div>
-        <InkSegmented v-model="thinkingLevel" :options="THINKING_LEVELS" />
+        <ToolSegmented v-model="thinkingLevel" :options="THINKING_LEVELS" />
       </div>
       <div>
         <div class="text-[11px] text-[var(--text-dim)] mb-1.5">创意程度</div>
-        <InkSegmented v-model="creativeLevel" :options="CREATIVE_LEVELS" />
+        <ToolSegmented v-model="creativeLevel" :options="CREATIVE_LEVELS" />
       </div>
       <div class="flex justify-between items-center pt-1">
         <button class="text-[11px] underline text-[var(--text-faint)] cursor-pointer" @click="app.go('settings')">去设置任务模型</button>

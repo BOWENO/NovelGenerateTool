@@ -2,6 +2,8 @@ import { app, dialog, shell } from 'electron'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, appendFileSync, copyFileSync, renameSync } from 'fs'
 import { join, normalize, sep, extname } from 'path'
 import { computeDiff } from './diff'
+import { atomicWrite } from './atomic'
+import { createHash } from 'crypto'
 
 let libraryRoot = ''
 
@@ -16,7 +18,7 @@ export function getLibraryRoot(): string {
 
 /** 防路径穿越：解析书内相对路径 */
 function safeResolve(book: string, rel: string): string {
-  const base = normalize(join(libraryRoot, book))
+  const base = safeBookDir(book)
   const full = normalize(join(base, rel))
   if (!full.startsWith(base + sep) && full !== base) throw new Error('非法路径')
   return full
@@ -43,6 +45,7 @@ export interface BookMeta {
     chapterCursor: number
     chapterTotal: number
     completed: boolean[]
+    pendingChapter?: { no: number; draftPath: string; reviewPath: string; baseContent: string; reviewedContent?: string } | null
   }
 }
 
@@ -96,7 +99,7 @@ export function createBook(
   if (/[\\/:*?"<>|]/.test(title) || title.includes('..')) throw new Error('书名不能包含 \\ / : * ? " < > | 等字符')
   const dir = join(libraryRoot, title)
   if (existsSync(dir)) throw new Error('已存在同名书籍')
-  for (const sub of ['大纲', '角色', '设定', '正文', '.inkdesk', '.inkdesk/history']) mkdirSync(join(dir, sub), { recursive: true })
+  for (const sub of ['大纲', '角色', '设定', '正文', '.novelgeneratetool', '.novelgeneratetool/history']) mkdirSync(join(dir, sub), { recursive: true })
   const now = new Date().toISOString()
   const meta: BookMeta = {
     title,
@@ -111,7 +114,7 @@ export function createBook(
     group: String(opt.group || ''),
     workflow: defaultWorkflow()
   }
-  writeFileSync(join(dir, 'book.json'), JSON.stringify(meta, null, 2), 'utf-8')
+  atomicWrite(join(dir, 'book.json'), JSON.stringify(meta, null, 2))
   return meta
 }
 
@@ -123,7 +126,7 @@ export function writeBookMeta(book: string, patch: Partial<BookMeta>): BookMeta 
   const p = safeResolve(book, 'book.json')
   const meta = JSON.parse(readFileSync(p, 'utf-8')) as BookMeta
   const out = { ...meta, ...patch, updatedAt: new Date().toISOString() }
-  writeFileSync(p, JSON.stringify(out, null, 2), 'utf-8')
+  atomicWrite(p, JSON.stringify(out, null, 2))
   return out
 }
 
@@ -177,12 +180,20 @@ export function writeTextFile(book: string, rel: string, content: string): void 
     const old = readFileSync(p, 'utf-8')
     if (old !== content) snapshot(book, rel, old)
   }
-  writeFileSync(p, content, 'utf-8')
+  atomicWrite(p, content)
+}
+
+/** 作者采用草稿：在同一次主进程操作内核对旧正文，避免异步覆盖较新修改。 */
+export function adoptChapter(book: string, rel: string, baseContent: string, content: string): { sha256: string } {
+  if (!/^正文\/第\d+章\.md$/.test(rel) || !content.trim()) throw new Error('章节路径或正文无效')
+  if (readTextFile(book, rel) !== baseContent) throw new Error('正文已在别处修改，请重新读取后审阅。')
+  writeTextFile(book, rel, content)
+  return { sha256: createHash('sha256').update(content).digest('hex') }
 }
 
 function snapshot(book: string, rel: string, content: string): void {
   try {
-    const histDir = safeResolve(book, join('.inkdesk', 'history'))
+    const histDir = safeResolve(book, join('.novelgeneratetool', 'history'))
     mkdirSync(histDir, { recursive: true })
     const name = rel.replace(/[\\/:*?"<>|]/g, '_')
     const files = readdirSync(histDir).filter((f) => f.startsWith(name)).sort()
@@ -198,7 +209,7 @@ function snapshot(book: string, rel: string, content: string): void {
 
 /** 某文件的历史快照列表（新→旧），供写作台「历史版本」面板 */
 export function historyList(book: string, rel: string): { file: string; at: string }[] {
-  const histDir = safeResolve(book, join('.inkdesk', 'history'))
+  const histDir = safeResolve(book, join('.novelgeneratetool', 'history'))
   if (!existsSync(histDir)) return []
   const prefix = rel.replace(/[\\/:*?"<>|]/g, '_')
   return readdirSync(histDir)
@@ -212,7 +223,7 @@ export function historyList(book: string, rel: string): { file: string; at: stri
 }
 
 export function historyRead(book: string, rel: string, file: string): string {
-  const histDir = safeResolve(book, join('.inkdesk', 'history'))
+  const histDir = safeResolve(book, join('.novelgeneratetool', 'history'))
   const target = normalize(join(histDir, file))
   if (!target.startsWith(normalize(histDir) + sep) || !file.endsWith('.bak')) throw new Error('非法快照路径')
   return readTextAuto(target)
@@ -256,9 +267,9 @@ export function listTree(book: string, rel = ''): TreeNode[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name)
     const isDir = statSync(p).isDirectory()
-    // .inkdesk 是应用私有目录；.json 是给智能体读的结构化数据；图片（地图底图等）由应用与智能体专用通道读写。
+    // .novelgeneratetool 是应用私有目录；.json 是给智能体读的结构化数据；图片（地图底图等）由应用与智能体专用通道读写。
     // 这些对作者没有可读性（打开是乱码或空白），统一不在文件树里出现——需要时由智能体通过专门工具读取。
-    if (name === '.inkdesk' || name.endsWith('.json') || (!isDir && /\.(png|jpe?g|webp|gif|bmp|ico|svg)$/i.test(name))) continue
+    if (name === '.novelgeneratetool' || name.endsWith('.json') || (!isDir && /\.(png|jpe?g|webp|gif|bmp|ico|svg)$/i.test(name))) continue
     if (isDir && name === '地图图') continue // 应用管理的地图底图目录，整目录隐藏
     const node: TreeNode = { name, path: rel ? `${rel}/${name}` : name, dir: isDir }
     if (isDir) node.children = listTree(book, node.path)
@@ -578,7 +589,7 @@ export interface Stats {
 
 export function readStats(book: string): Stats {
   try {
-    const p = safeResolve(book, join('.inkdesk', 'stats.json'))
+    const p = safeResolve(book, join('.novelgeneratetool', 'stats.json'))
     if (!existsSync(p)) return { days: {}, prevCounts: {} }
     const raw = JSON.parse(readFileSync(p, 'utf-8')) as Partial<Stats>
     // 残缺 JSON 容错：写入中断后不至于统计功能整体死锁
@@ -597,14 +608,14 @@ export function addStats(book: string, handwritten: number, ai: number): Stats {
   s.days[day] = s.days[day] || { handwritten: 0, ai: 0 }
   s.days[day].handwritten += handwritten
   s.days[day].ai += ai
-  writeTextFile(book, join('.inkdesk', 'stats.json'), JSON.stringify(s, null, 2))
+  writeTextFile(book, join('.novelgeneratetool', 'stats.json'), JSON.stringify(s, null, 2))
   return s
 }
 
 export function recordCount(book: string, rel: string, length: number): void {
   const s = readStats(book)
   s.prevCounts[rel] = length
-  writeTextFile(book, join('.inkdesk', 'stats.json'), JSON.stringify(s, null, 2))
+  writeTextFile(book, join('.novelgeneratetool', 'stats.json'), JSON.stringify(s, null, 2))
 }
 
 export function copyDefaultCover(book: string): void {

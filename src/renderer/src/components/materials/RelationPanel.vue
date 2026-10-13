@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '../../store/app'
 import { useLibraryStore } from '../../store/library'
 import { useConversationStore } from '../../store/conversation'
-import { inkPrompt, inkConfirm } from '../../ui/inkPrompt'
+import { toolPrompt, toolConfirm } from '../../ui/toolPrompt'
 import GraphCanvas, { type CanvasNode, type CanvasEdge } from './GraphCanvas.vue'
 import { Plus, Sparkles, LayoutGrid, Maximize2, ZoomIn, ZoomOut, Trash2, Users } from 'lucide-vue-next'
 
@@ -105,7 +105,7 @@ function addNode() {
 async function removeNode(id: string) {
   const n = nodes.value.find((x) => x.id === id)
   if (!n) return
-  const ok = await inkConfirm(`确定删除「${n.name}」及其关系？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除「${n.name}」及其关系？`, { confirmText: '删除', danger: true })
   if (!ok) return
   nodes.value = nodes.value.filter((x) => x.id !== id)
   edges.value = edges.value.filter((e) => e.source !== id && e.target !== id)
@@ -115,7 +115,7 @@ async function removeNode(id: string) {
 
 async function onConnect(c: { source: string; target: string }) {
   const options = RELATIONS.map((r) => `${r.label}=${r.key}`).join('，')
-  const input = await inkPrompt(`关系类型（${options}），可再跟一句说明，例如「enemy 因灭门结仇」`, 'friend')
+  const input = await toolPrompt(`关系类型（${options}），可再跟一句说明，例如「enemy 因灭门结仇」`, 'friend')
   if (input === null) return
   const [head, ...rest] = String(input).trim().split(/\s+/)
   const relation = (RELATIONS.find((r) => r.key === head || r.label === head)?.key || 'other') as RelationKind
@@ -189,9 +189,9 @@ function onFileChanged(e: Event) {
 
 onMounted(() => {
   void load()
-  window.addEventListener('inkdesk:file-changed', onFileChanged)
+  window.addEventListener('novelgeneratetool:file-changed', onFileChanged)
 })
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 </script>
 
 <template>
@@ -276,8 +276,8 @@ onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChang
               <Trash2 :size="12" /> 删除
             </button>
           </div>
-          <input v-model="picked.name" class="ink-input" placeholder="角色名" />
-          <input v-model="picked.role" class="ink-input" placeholder="身份定位，如「打更人·主角」" />
+          <input v-model="picked.name" class="tool-input" placeholder="角色名" />
+          <input v-model="picked.role" class="tool-input" placeholder="身份定位，如「打更人·主角」" />
 
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5">相关关系</div>

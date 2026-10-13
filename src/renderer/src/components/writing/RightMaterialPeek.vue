@@ -261,11 +261,11 @@ function onFileChanged() {
 }
 
 onMounted(() => {
-  window.addEventListener('inkdesk:file-changed', onFileChanged)
+  window.addEventListener('novelgeneratetool:file-changed', onFileChanged)
   void load()
 })
 
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 watch(() => [props.book, props.tab], () => void load())
 </script>

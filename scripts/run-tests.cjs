@@ -11,7 +11,7 @@ const filter = process.argv[2] || ''
 
 const files = fs
   .readdirSync(testsDir)
-  .filter((f) => f.endsWith('.test.ts') && f.includes(filter))
+  .filter((f) => /\.test\.(ts|cjs)$/.test(f) && f.includes(filter))
 if (!files.length) {
   console.error('没有找到测试文件')
   process.exit(1)
@@ -23,6 +23,10 @@ for (const f of files) {
   const out = path.join(root, 'out', `test-${f.replace(/\.ts$/, '')}.cjs`)
   console.log(`\n▶ ${f}`)
   try {
+    if (f.endsWith('.cjs')) {
+      execFileSync(process.execPath, [src], { stdio: 'inherit' })
+      continue
+    }
     // 经 node 调 esbuild 的 js 入口（Windows 下 execFileSync 直接跑 .cmd 会被拦）
     execFileSync(process.execPath, [esbuildBin, src, '--bundle', '--platform=node', '--format=cjs', '--alias:electron=./tests/electron-stub.ts', `--outfile=${out}`], { stdio: 'pipe' })
     execFileSync(process.execPath, [out], { stdio: 'inherit' })

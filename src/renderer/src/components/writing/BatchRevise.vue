@@ -151,7 +151,7 @@ async function decide(item: Item, accept: boolean) {
     item.status = accept ? 'applied' : 'rejected'
     if (!accept) item.proposal = null
     if (accept && r.ok) {
-      window.dispatchEvent(new CustomEvent('inkdesk:file-changed', { detail: { path: item.path } }))
+      window.dispatchEvent(new CustomEvent('novelgeneratetool:file-changed', { detail: { path: item.path } }))
     }
   } catch (e) {
     item.error = `操作失败：${(e as Error).message}`
@@ -174,7 +174,7 @@ async function acceptAll() {
         <!-- 头部 -->
         <div class="shrink-0 flex items-center gap-2 px-5 py-3.5 border-b border-[var(--border)]">
           <SquareCheckBig :size="15" :style="{ color: 'var(--accent)' }" />
-          <span class="font-serif-ink text-[16px]">批量修订</span>
+          <span class="font-serif-tool text-[16px]">批量修订</span>
           <span class="text-[11px] text-[var(--text-faint)]">多章套用同一条指令，逐章出差异，你逐个审</span>
           <div class="flex-1" />
           <button class="text-[var(--text-faint)] hover:text-[var(--text)] cursor-pointer" @click="emit('close')"><X :size="16" /></button>
@@ -186,7 +186,7 @@ async function acceptAll() {
             <button class="text-[11.5px] px-2.5 py-1 rounded-lg cursor-pointer border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)]" @click="toggleAll">
               全选 / 反选
             </button>
-            <input v-model="rangeText" class="ink-input w-28 py-1" placeholder="范围如 3-20" @keydown.enter="applyRange" />
+            <input v-model="rangeText" class="tool-input w-28 py-1" placeholder="范围如 3-20" @keydown.enter="applyRange" />
             <button class="text-[11.5px] px-2.5 py-1 rounded-lg cursor-pointer border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)]" @click="applyRange">
               选中范围
             </button>
@@ -206,7 +206,7 @@ async function acceptAll() {
             </button>
           </div>
 
-          <textarea v-model="instruction" class="ink-textarea text-[12.5px]" rows="3" placeholder="修订指令，对选中的每一章都生效。如：把对话精炼三成，保留关键信息；删掉「一瞬间」「仿佛」堆叠。" />
+          <textarea v-model="instruction" class="tool-textarea text-[12.5px]" rows="3" placeholder="修订指令，对选中的每一章都生效。如：把对话精炼三成，保留关键信息；删掉「一瞬间」「仿佛」堆叠。" />
           <div class="flex flex-wrap gap-1.5">
             <button
               v-for="p in PRESETS"

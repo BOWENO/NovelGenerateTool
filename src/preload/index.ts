@@ -24,6 +24,7 @@ const api = {
 
   fileRead: (book: string, rel: string) => ipcRenderer.invoke('file:read', book, rel),
   fileWrite: (book: string, rel: string, content: string) => ipcRenderer.invoke('file:write', book, rel, content),
+  chapterAdopt: (book: string, rel: string, base: string, content: string) => ipcRenderer.invoke('chapter:adopt', book, rel, base, content),
   fileDelete: (book: string, rel: string) => ipcRenderer.invoke('file:delete', book, rel),
   historyList: (book: string, rel: string) => ipcRenderer.invoke('history:list', book, rel),
   historyRead: (book: string, rel: string, file: string) => ipcRenderer.invoke('history:read', book, rel, file),

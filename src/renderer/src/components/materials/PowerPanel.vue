@@ -3,8 +3,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
 import { useAppStore } from '../../store/app'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { ArrowDown, ArrowUp, Plus, Trash2, WandSparkles } from 'lucide-vue-next'
 import type { PowerChar, PowerData, PowerRealm } from '../../types'
 
@@ -71,7 +71,7 @@ function moveRealm(i: number, dir: -1 | 1) {
 async function removeRealm(id: string) {
   const r = realms.value.find((x) => x.id === id)
   if (!r) return
-  const ok = await inkConfirm(`删除境界「${r.name}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除境界「${r.name}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   realms.value = realms.value.filter((x) => x.id !== id).map((x, k) => ({ ...x, sortKey: k }))
   // 引用该境界的角色置为未定，防悬空值落盘
@@ -93,7 +93,7 @@ function addChar() {
 async function removeChar(id: string) {
   const c = chars.value.find((x) => x.id === id)
   if (!c) return
-  const ok = await inkConfirm(`移除角色「${c.name}」的境界登记？`, { confirmText: '移除', danger: true })
+  const ok = await toolConfirm(`移除角色「${c.name}」的境界登记？`, { confirmText: '移除', danger: true })
   if (!ok) return
   chars.value = chars.value.filter((x) => x.id !== id)
   if (selectedId.value === id) selectedId.value = chars.value[0]?.id || ''
@@ -103,7 +103,7 @@ async function removeChar(id: string) {
 /** 交给智能体：从设定/正文中梳理境界体系（走写入提案） */
 async function askAgent() {
   if (!lib.current) return
-  app.goAskAgent() // 切到妙笔页，用户能直接看到流式生成
+  app.goAskAgent() // 切到创作助手页，用户能直接看到流式生成
   const { useConversationStore } = await import('../../store/conversation')
   const conv = useConversationStore()
   await conv.askWith(
@@ -117,8 +117,8 @@ function onFileChanged(e: Event) {
   const p = (e as CustomEvent<{ path?: string }>).detail?.path
   if (p === '境界体系.json') void load()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 watch(book, () => void load())
 onMounted(() => void load())
@@ -177,7 +177,7 @@ onMounted(() => void load())
           <div class="space-y-1">
             <div v-for="(r, i) in realms" :key="r.id" class="flex items-center gap-2">
               <span class="text-[11px] text-[var(--text-faint)] w-5 text-right">{{ i + 1 }}</span>
-              <input v-model="r.name" class="ink-input flex-1" placeholder="境界名" @change="persist" />
+              <input v-model="r.name" class="tool-input flex-1" placeholder="境界名" @change="persist" />
               <div class="flex items-center">
                 <button class="p-1 text-[var(--text-faint)] hover:text-[var(--accent)] cursor-pointer" title="上移" @click="moveRealm(i, -1)">
                   <ArrowUp :size="13" />
@@ -197,7 +197,7 @@ onMounted(() => void load())
         <!-- 越级规则 -->
         <div class="max-w-xl">
           <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">越级 / 战力规则</div>
-          <textarea v-model="rules" rows="4" class="ink-textarea" placeholder="能否越级挑战？越几级是极限？晋级的代价与条件是什么？" @change="persist" />
+          <textarea v-model="rules" rows="4" class="tool-textarea" placeholder="能否越级挑战？越几级是极限？晋级的代价与条件是什么？" @change="persist" />
         </div>
 
         <!-- 选中角色编辑 -->
@@ -205,16 +205,16 @@ onMounted(() => void load())
           <div class="flex gap-3">
             <div class="flex-1">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">角色名</div>
-              <input v-model="selected.name" class="ink-input" placeholder="角色名" @change="persist" />
+              <input v-model="selected.name" class="tool-input" placeholder="角色名" @change="persist" />
             </div>
             <div class="w-44 shrink-0">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">当前境界</div>
-              <InkSelect v-model="selected.realm" class="w-full" :options="realmOptions" @change="persist" />
+              <ToolSelect v-model="selected.realm" class="w-full" :options="realmOptions" @change="persist" />
             </div>
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">备注</div>
-            <textarea v-model="selected.note" rows="3" class="ink-textarea" placeholder="功法特点、晋级进度、战力特长" @change="persist" />
+            <textarea v-model="selected.note" rows="3" class="tool-textarea" placeholder="功法特点、晋级进度、战力特长" @change="persist" />
           </div>
         </div>
       </div>

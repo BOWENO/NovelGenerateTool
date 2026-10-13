@@ -3,7 +3,7 @@ import { computed, onActivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '../store/app'
 import { useLibraryStore } from '../store/library'
 import { useConversationStore } from '../store/conversation'
-import InkEditor from '../editor/InkEditor.vue'
+import ToolEditor from '../editor/ToolEditor.vue'
 import ChapterTree from '../components/ChapterTree.vue'
 import SelectionAiModal from '../components/SelectionAiModal.vue'
 import DeaiPanel from '../components/DeaiPanel.vue'
@@ -17,14 +17,14 @@ import FindReplace from '../components/writing/FindReplace.vue'
 import QuickName from '../components/writing/QuickName.vue'
 import TypographyPanel from '../components/writing/TypographyPanel.vue'
 import HistoryPanel from '../components/writing/HistoryPanel.vue'
-import InkButton from '../ui/InkButton.vue'
-import InkModal from '../ui/InkModal.vue'
+import ToolButton from '../ui/ToolButton.vue'
+import ToolModal from '../ui/ToolModal.vue'
 import PageSubNav from '../ui/PageSubNav.vue'
 import { usePanelDrag } from '../ui/usePanelDrag'
 import EmptyHint from '../ui/EmptyHint.vue'
 import { renderMarkdown } from '../ui/markdown'
 import { onHeaderAction } from '../ui/headerActions'
-import { inkConfirm } from '../ui/inkPrompt'
+import { toolConfirm } from '../ui/toolPrompt'
 import { Maximize2, Minimize2, Eye, Columns2, PanelRight, Sparkles, Search, Type, History, Lightbulb, Check, Undo2, Redo2, FileText, ArrowUpRight } from 'lucide-vue-next'
 
 const app = useAppStore()
@@ -41,7 +41,7 @@ const content = ref('')
 const savedLen = ref(0)
 const aiTouched = ref(false)
 const saving = ref(false)
-const editorRef = ref<InstanceType<typeof InkEditor>>()
+const editorRef = ref<InstanceType<typeof ToolEditor>>()
 const treeRef = ref<InstanceType<typeof ChapterTree>>()
 const stats = ref({ handwritten: 0, ai: 0 })
 
@@ -57,7 +57,7 @@ const rightTab = computed({
 })
 const MATE_TABS = [
   { key: 'ai', label: '智能体' },
-  { key: 'deai', label: '去 AI 味' },
+  { key: 'deai', label: '风格检查' },
   { key: '速检', label: '速检' },
   { key: '章节', label: '章节' },
   { key: '大纲', label: '大纲' },
@@ -92,7 +92,7 @@ async function refreshCustomPanels() {
 watch(() => lib.current?.title, () => void refreshCustomPanels(), { immediate: true })
 // KeepAlive 缓存页面：切回写作台时重拉面板列表（资料区新建/删除的面板要同步出现）
 onActivated(() => void refreshCustomPanels())
-window.addEventListener('inkdesk:panels-changed', () => void refreshCustomPanels())
+window.addEventListener('novelgeneratetool:panels-changed', () => void refreshCustomPanels())
 
 const mateTabs = computed(() => [...MATE_TABS, ...customPanels.value])
 const customTabInst = computed(() => customPanels.value.find((p) => p.key === rightTab.value))
@@ -190,7 +190,7 @@ interface TypoConf {
   paraGap: boolean
   grid: string
 }
-const TYPO_KEY = 'inkdesk.typography'
+const TYPO_KEY = 'novelgeneratetool.typography'
 function loadTypo(): TypoConf {
   const d: TypoConf = { fs: 16, lh: 2, measure: 720, font: 'default', paraGap: false, grid: 'none' }
   try {
@@ -202,18 +202,18 @@ function loadTypo(): TypoConf {
 }
 const typo = ref<TypoConf>(loadTypo())
 const typoVars = computed(() => ({
-  '--ink-fs': `${typo.value.fs}px`,
-  '--ink-lh': String(typo.value.lh),
-  '--ink-measure': `${typo.value.measure}px`,
-  '--ink-font':
+  '--tool-fs': `${typo.value.fs}px`,
+  '--tool-lh': String(typo.value.lh),
+  '--tool-measure': `${typo.value.measure}px`,
+  '--tool-font':
     typo.value.font === 'serif'
       ? `'Songti SC', 'SimSun', 'Noto Serif SC', serif`
       : typo.value.font === 'sans'
         ? `'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif`
         : 'inherit',
-  '--ink-para': typo.value.paraGap ? '1.6em' : '1em'
+  '--tool-para': typo.value.paraGap ? '1.6em' : '1em'
 }))
-const typoGrid = computed(() => (typo.value.grid === 'solid' ? 'ink-grid-solid' : typo.value.grid === 'dash' ? 'ink-grid-dash' : ''))
+const typoGrid = computed(() => (typo.value.grid === 'solid' ? 'tool-grid-solid' : typo.value.grid === 'dash' ? 'tool-grid-dash' : ''))
 
 // ============ 灵感速记（写作台内随手记） ============
 const noteText = ref('')
@@ -226,7 +226,7 @@ async function saveNote() {
   await window.api.libWrite('notes', '通用', `${name} · ${stamp}`, '写作台速记', ['灵感'], text)
   noteText.value = ''
   noteSaved.value = true
-  window.dispatchEvent(new CustomEvent('inkdesk:lib-changed'))
+  window.dispatchEvent(new CustomEvent('novelgeneratetool:lib-changed'))
   setTimeout(() => (noteSaved.value = false), 2500)
 }
 
@@ -351,7 +351,7 @@ async function newChapter() {
 }
 
 async function deleteFile(rel: string) {
-  const ok = await inkConfirm(`确定删除 ${rel} ？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除 ${rel} ？`, { confirmText: '删除', danger: true })
   if (!ok) return
   await window.api.fileDelete(lib.current!.title, rel)
   if (currentFile.value === rel) {
@@ -408,7 +408,7 @@ onMounted(async () => {
     if (key === 'writing:newChapter') void newChapter()
   })
   stats.value = await lib.todayStats()
-  window.addEventListener('inkdesk:file-changed', onFileChanged)
+  window.addEventListener('novelgeneratetool:file-changed', onFileChanged)
   window.addEventListener('keydown', onGlobalKeydown)
 })
 
@@ -425,7 +425,7 @@ watch(
 onUnmounted(() => {
   offHeader?.()
   offHeader = null
-  window.removeEventListener('inkdesk:file-changed', onFileChanged)
+  window.removeEventListener('novelgeneratetool:file-changed', onFileChanged)
   window.removeEventListener('keydown', onGlobalKeydown)
 })
 </script>
@@ -434,7 +434,7 @@ onUnmounted(() => {
   <!-- 未打开书籍 -->
   <div v-if="!lib.current" class="h-full flex flex-col items-center justify-center text-[var(--text-faint)] gap-4">
     <p>尚未打开作品</p>
-    <InkButton @click="app.go('bookshelf')">去书架选择</InkButton>
+    <ToolButton @click="app.go('bookshelf')">去书架选择</ToolButton>
   </div>
 
   <div v-else class="h-full flex">
@@ -463,7 +463,7 @@ onUnmounted(() => {
     <section class="flex-1 min-w-0 flex flex-col">
       <PageSubNav dense>
         <template #left>
-          <span class="font-serif-ink text-[14px] shrink-0">{{ chapterTitle || '未选择文件' }}</span>
+          <span class="font-serif-tool text-[14px] shrink-0">{{ chapterTitle || '未选择文件' }}</span>
           <span class="text-[11px] text-[var(--text-faint)] shrink-0">{{ content.length }} 字</span>
           <WritingAssistBar
             v-if="currentFile && currentFile.startsWith('正文/')"
@@ -534,8 +534,8 @@ onUnmounted(() => {
         <div v-if="!currentFile" class="h-full flex items-center justify-center text-[var(--text-faint)] text-sm">
           从左侧选择章节或资料文件开始写作
         </div>
-        <div v-else class="prose-ink" :class="typoGrid" :style="typoVars">
-          <InkEditor
+        <div v-else class="prose-tool" :class="typoGrid" :style="typoVars">
+          <ToolEditor
             ref="editorRef"
             v-model="content"
             :placeholder="chapterTitle ? '正文从此开始…' : '开始写作…'"
@@ -545,7 +545,7 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <!-- 右（标签页布局）：智能体 / 去 AI 味 / 资料速览 -->
+    <!-- 右（标签页布局）：智能体 / 风格检查 / 资料速览 -->
     <aside
       v-if="!threePane"
       class="app-chrome relative shrink-0 border-l border-[var(--border)] bg-[var(--bg-soft)]/60 flex flex-col min-h-0"
@@ -571,14 +571,14 @@ onUnmounted(() => {
         <AgentConversation />
       </div>
 
-      <!-- 去 AI 味 -->
+      <!-- 风格检查 -->
       <div v-else-if="rightTab === 'deai'" class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         <div>
           <div class="text-xs text-[var(--text-faint)] tracking-wider mb-2 flex items-center gap-1.5">
-            <Eye :size="13" /> 整章去 AI 味
+            <Eye :size="13" /> 整章风格检查
           </div>
           <p class="text-[11px] text-[var(--text-faint)] leading-5 mb-3">
-            对当前打开的章节做人类信号自检（六维密度+红牌警告）、红牌级诊断（含 OOC 角色对照）、L1-L4 四档注入式改写与 5 维评分，改写结果可编辑后一键应用。
+            对当前打开的章节做文本统计与句式提示、结合角色资料的场面诊断、四档定向修订与审查建议，改写结果可编辑后一键应用。
           </p>
           <DeaiPanel v-if="currentFile.startsWith('正文/')" :chapter-text="content" :book="lib.current.title" :file="currentFile" @apply-text="applyWholeText" />
           <p v-else class="text-xs text-[var(--text-faint)]">打开一个章节文件后可使用整章诊断 / 改写 / 评分。</p>
@@ -646,17 +646,17 @@ onUnmounted(() => {
     <SelectionAiModal :open="selOpen" :action="selAction" :text="selText" @close="selOpen = false" @apply="applySelection" />
 
     <!-- 快速取名 -->
-    <InkModal :open="nameOpen" title="快速取名" wide @close="nameOpen = false">
+    <ToolModal :open="nameOpen" title="快速取名" wide @close="nameOpen = false">
       <QuickName @close="nameOpen = false" />
-    </InkModal>
+    </ToolModal>
 
     <!-- 排版设置 -->
-    <InkModal :open="typoOpen" title="排版设置" @close="typoOpen = false">
+    <ToolModal :open="typoOpen" title="排版设置" @close="typoOpen = false">
       <TypographyPanel :typo="typo" @close="typoOpen = false" />
-    </InkModal>
+    </ToolModal>
 
     <!-- 历史版本 -->
-    <InkModal :open="historyOpen" :title="`历史版本 · ${chapterTitle}`" wide @close="historyOpen = false">
+    <ToolModal :open="historyOpen" :title="`历史版本 · ${chapterTitle}`" wide @close="historyOpen = false">
       <HistoryPanel
         v-if="currentFile && lib.current"
         :book="lib.current.title"
@@ -664,19 +664,19 @@ onUnmounted(() => {
         @restored="reloadCurrent"
         @close="historyOpen = false"
       />
-    </InkModal>
+    </ToolModal>
 
     <!-- 灵感速记 -->
-    <InkModal :open="noteOpen" title="灵感速记" @close="noteOpen = false">
+    <ToolModal :open="noteOpen" title="灵感速记" @close="noteOpen = false">
       <div class="space-y-3">
-        <textarea v-model="noteText" rows="5" class="ink-textarea text-[13px]" placeholder="随手记一条灵感…存进灵感便签库" />
+        <textarea v-model="noteText" rows="5" class="tool-textarea text-[13px]" placeholder="随手记一条灵感…存进灵感便签库" />
         <div class="flex items-center justify-end gap-2">
           <span v-if="noteSaved" class="text-[11.5px] ok-pulse inline-flex items-center gap-1" style="color: var(--accent)">
             <Check :size="12" /> 已存入灵感便签
           </span>
-          <InkButton :disabled="!noteText.trim()" @click="saveNote">记下来</InkButton>
+          <ToolButton :disabled="!noteText.trim()" @click="saveNote">记下来</ToolButton>
         </div>
       </div>
-    </InkModal>
+    </ToolModal>
   </div>
 </template>

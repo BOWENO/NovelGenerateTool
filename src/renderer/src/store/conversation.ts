@@ -80,7 +80,7 @@ interface State {
   teamAgents: string[]
   attachments: { name: string; text: string; image?: string }[]
   expandedThinking: Record<string, boolean>
-  /** 自定义智能体（智能体库维护；妙笔只显示 enabled 的） */
+  /** 自定义智能体（智能体库维护；创作助手只显示 enabled 的） */
   customAgents: CustomAgent[]
   /** 早期对话的压缩摘要（上下文达窗口 80% 后自动生成） */
   contextSummary: string
@@ -127,7 +127,7 @@ export const useConversationStore = defineStore('conversation', {
   }),
 
   getters: {
-    /** 内置 + 已启用的自定义智能体（妙笔与圆桌的选择列表都用它） */
+    /** 内置 + 已启用的自定义智能体（创作助手与圆桌的选择列表都用它） */
     allAgents: (s): AgentItem[] => [
       ...AGENTS,
       ...s.customAgents
@@ -172,7 +172,7 @@ export const useConversationStore = defineStore('conversation', {
       }
     },
 
-    /** 拉取自定义智能体列表（智能体库保存后也要调，妙笔列表才会刷新） */
+    /** 拉取自定义智能体列表（智能体库保存后也要调，创作助手列表才会刷新） */
     async refreshCustomAgents() {
       this.customAgents = ((await window.api.customAgentsList()) as CustomAgent[]) || []
     },
@@ -390,13 +390,6 @@ export const useConversationStore = defineStore('conversation', {
         return
       }
 
-      const history = plain(
-        this.messages
-          .filter((m) => m.id !== assistantMsg.id && !m.compacted)
-          .map((m) => ({ role: m.role, content: m.content }))
-          .filter((m) => m.content.trim())
-      )
-
       const app = useAppStore()
       const cfg = app.config
       const task = cfg?.tasks?.agent
@@ -408,6 +401,12 @@ export const useConversationStore = defineStore('conversation', {
       try {
         // 每轮发送前先做上下文压缩检查（达到窗口 80% 才实际压缩；此时 running 已置位，防并发）
         await this.maybeCompress()
+        const history = plain(
+          this.messages
+            .filter((m) => m.id !== assistantMsg.id && !m.compacted)
+            .map((m) => ({ role: m.role, content: m.content }))
+            .filter((m) => m.content.trim())
+        )
         await window.api.agentRun({
           runId: this.runId,
           book: this.book,
@@ -565,7 +564,7 @@ export const useConversationStore = defineStore('conversation', {
       // 与手动接受一致：通知编辑器重新载入，否则旧缓冲会在下次保存时把 AI 改动覆盖回去
       if (res.ok) {
         const target = this.messages.flatMap((m) => m.proposals).find((p) => p.id === proposalId)?.target || ''
-        window.dispatchEvent(new CustomEvent('inkdesk:file-changed', { detail: { path: target } }))
+        window.dispatchEvent(new CustomEvent('novelgeneratetool:file-changed', { detail: { path: target } }))
       }
     },
 
@@ -587,7 +586,7 @@ export const useConversationStore = defineStore('conversation', {
       await this.persist()
       if (res.ok) {
         const target = this.messages.flatMap((m) => m.proposals).find((p) => p.id === proposalId)?.target || ''
-        window.dispatchEvent(new CustomEvent('inkdesk:file-changed', { detail: { path: target } }))
+        window.dispatchEvent(new CustomEvent('novelgeneratetool:file-changed', { detail: { path: target } }))
       }
     },
 
@@ -628,7 +627,7 @@ export const useConversationStore = defineStore('conversation', {
         }
       }
       await this.persist()
-      if (res.ok) window.dispatchEvent(new CustomEvent('inkdesk:lib-changed'))
+      if (res.ok) window.dispatchEvent(new CustomEvent('novelgeneratetool:lib-changed'))
     },
 
     async rejectLibProposal(proposalId: string) {

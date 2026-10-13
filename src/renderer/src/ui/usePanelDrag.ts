@@ -6,7 +6,7 @@ import { ref, onBeforeUnmount } from 'vue'
  * @param dir 1 = 面板在左侧（向右拖变宽）；-1 = 面板在右侧（向左拖变宽）
  */
 export function usePanelDrag(key: string, init: number, min: number, max: number) {
-  const storageKey = `inkdesk.panel.${key}`
+  const storageKey = `novelgeneratetool.panel.${key}`
   const width = ref(init)
   try {
     const raw = localStorage.getItem(storageKey)

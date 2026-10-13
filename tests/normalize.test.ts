@@ -84,7 +84,7 @@ function ok(cond: boolean, label: string): void {
 
 // ============ splitCharacterText / 迁移 ============
 {
-  const card = '# 林栖\n女主。\n\n## 墨白（反派）\n魔修。\n\n# 顾云舟\n主角。'
+  const card = '# 林栖\n女主。\n\n# 墨白（反派）\n魔修。\n\n# 顾云舟\n主角。'
   const sections = splitCharacterText(card)
   ok(sections.length === 3, 'split：三张卡')
   ok(sections[0].name === '林栖' && sections[1].name === '墨白（反派）', 'split：名字清洗保留括号')
@@ -92,7 +92,7 @@ function ok(cond: boolean, label: string): void {
   ok(splitCharacterText('没有标题的纯文本').length === 0, 'split：无标题返回空')
 
   // 迁移：临时书目录里放旧整包 → 拆分 + .bak + 幂等
-  const root = mkdtempSync(join(tmpdir(), 'dawo-test-'))
+  const root = mkdtempSync(join(tmpdir(), 'novelgeneratetool-test-'))
   setLibraryRoot(root)
   const book = '测试书'
   mkdirSync(join(root, book, '角色'), { recursive: true })

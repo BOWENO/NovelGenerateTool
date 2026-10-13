@@ -12,6 +12,8 @@ import { computeDiff, DiffHunk } from './lib/diff'
 import { readBookMeta, listTree, writeTextFile, getLibraryRoot, readTextFile, TreeNode } from './lib/library'
 import { listLibrary, readEntry, writeEntry, readEntriesForContext, LibKind, LIB_LABEL } from './lib/materials'
 import { estimateTokens, recordCall } from './lib/ailog'
+import { streamEvents } from './lib/stream'
+import { assertContextFits } from './lib/context'
 import {
   STRUCTURED_FILES,
   normalizeCharGraph,
@@ -136,7 +138,7 @@ function walkFiles(book: string, rel = ''): string[] {
   const base = rel ? join(getLibraryRoot(), book, rel) : join(getLibraryRoot(), book)
   if (!existsSync(base)) return out
   for (const name of readdirSync(base)) {
-    if (name === '.inkdesk' || name === 'book.json') continue
+    if (name === '.novelgeneratetool' || name === 'book.json') continue
     const p = join(base, name)
     let isDir = false
     try {
@@ -443,6 +445,7 @@ async function runSubAgent(
 
   let lastText = ''
   for (let turn = 0; turn < 6; turn++) {
+    assertContextFits(JSON.stringify(messages).length + JSON.stringify(tools).length, cfg.modelContexts?.[`${provider.id}/${taskCfg.model}`])
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers,
@@ -451,8 +454,9 @@ async function runSubAgent(
     })
     if (!res.ok) throw new Error(`接口返回 ${res.status}`)
     const json = (await res.json()) as {
-      choices?: { message?: { content?: string; tool_calls?: { id?: string; function?: { name?: string; arguments?: string } }[] } }[]
+      choices?: { finish_reason?: string; message?: { content?: string; tool_calls?: { id?: string; function?: { name?: string; arguments?: string } }[] } }[]
     }
+    if (json.choices?.[0]?.finish_reason === 'length') throw new Error('子任务输出被截断，未作为完成结果采用。')
     const msg = json.choices?.[0]?.message || {}
     const content = typeof msg.content === 'string' ? msg.content : ''
     const calls = msg.tool_calls || []
@@ -533,7 +537,7 @@ async function executeTool(name: string, rawArgs: string, ctx: ToolCtx): Promise
 
     case 'write_memory': {
       const scope = String(args.scope || '')
-      const text = String(args.text || '').trim().slice(0, 500)
+      const text = String(args.text || '').trim()
       const category = String(args.category || '').trim().slice(0, 20)
       const id = typeof args.id === 'string' ? args.id.trim() : ''
       if (scope !== 'global' && scope !== 'book') return { ok: false, content: 'scope 必须是 global（全局）或 book（本书）。' }
@@ -554,9 +558,8 @@ async function executeTool(name: string, rawArgs: string, ctx: ToolCtx): Promise
       const summary = `${added ? '新增' : '更新'}${isGlobal ? '全局' : '书籍'}记忆：${text.slice(0, 30)}`
       const renderList = (list) => list.map((e) => `· [${e.id}]${e.category ? `(${e.category})` : ''} ${e.text}`).join('\n')
       if (isGlobal) {
-        // 全局记忆不在书目录内，走不了提案通道：直写，设置→记忆 随时可查可改
-        memory.writeGlobalEntries(entries)
-        return { ok: true, content: `已${added ? '新增' : '更新'}全局记忆条目。作者可在「设置 → 记忆」中查看。` }
+        const before = memory.readGlobalEntries()
+        return makeProposal(ctx, '@global-memory', JSON.stringify({ entries: before }, null, 2), JSON.stringify({ entries }, null, 2), summary, renderList(before), renderList(entries), `${entries.length} 条`)
       }
       const before = memory.readBookEntries(ctx.book)
       if (JSON.stringify(before) === JSON.stringify(entries)) return { ok: true, content: '记忆与现状一致，无需修改。' }
@@ -1121,11 +1124,10 @@ function buildSystemPrompt(params: AgentRunParams, agent: ResolvedAgent): string
     const renderMem = (list: { category: string; text: string }[]) =>
       list.map((e) => `· [${e.category || '记忆'}] ${e.text}`).join('\n')
     if (gList.length || bList.length) {
-      const cut = (s: string) => (s.length > 6000 ? `${s.slice(0, 6000)}\n（过长已截断，完整内容用 read_memory 查看）` : s)
       parts.push(
         '\n【作者记忆】以下是作者长期沉淀的偏好、决策与禁区，必须遵守；需要新增或更新记忆时用 read_memory / write_memory（单条一句话，写前先读，新事实覆盖旧事实）：' +
-          (gList.length ? `\n—— 全局记忆（跨书通用）——\n${cut(renderMem(gList))}` : '') +
-          (bList.length ? `\n—— 本书记忆 ——\n${cut(renderMem(bList))}` : '')
+          (bList.length ? `\n—— 本书记忆 ——\n${renderMem(bList)}` : '') +
+          (gList.length ? `\n—— 全局记忆（跨书通用）——\n${renderMem(gList)}` : '')
       )
     }
   } catch {
@@ -1199,21 +1201,6 @@ function buildSystemPrompt(params: AgentRunParams, agent: ResolvedAgent): string
   return parts.join('\n')
 }
 
-async function* sseLines(res: Response): AsyncGenerator<string> {
-  const reader = res.body?.getReader()
-  if (!reader) throw new Error('响应无内容流')
-  const decoder = new TextDecoder()
-  let buf = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buf += decoder.decode(value, { stream: true })
-    const lines = buf.split('\n')
-    buf = lines.pop() || ''
-    for (const l of lines) yield l
-  }
-}
-
 export async function runAgent(win: BrowserWindow, params: AgentRunParams): Promise<void> {
   const { runId, book, agentId } = params
   const cfg = getConfig()
@@ -1251,7 +1238,7 @@ export async function runAgent(win: BrowserWindow, params: AgentRunParams): Prom
     }
     // 服务商自带联网搜索：按开关追加厂商专用工具/参数（Kimi $web_search、智谱 web_search、MiMo web_search、通义 enable_search）
     const searchPatch = cfg.providerSearch?.[provider.id] ? providerSearchPatch(provider.baseUrl) : null
-    // 厂商自带搜索可用时优先用它，不再注入墨案自带的联网工具，避免两套搜索重复触发
+    // 厂商自带搜索可用时优先用它，不再注入NovelGenerateTool自带的联网工具，避免两套搜索重复触发
     const tools = toolSchemasFor({
       webSearch: agent.webSearch && !searchPatch,
       libsRead: agent.custom ? agent.libsRead : undefined,
@@ -1282,6 +1269,7 @@ export async function runAgent(win: BrowserWindow, params: AgentRunParams): Prom
     if (provider.apiKey) headers.Authorization = `Bearer ${provider.apiKey}`
 
     for (let turn = 0; turn < 12; turn++) {
+      assertContextFits(JSON.stringify(messages).length + JSON.stringify(allTools).length, cfg.modelContexts?.[`${provider.id}/${taskCfg.model}`])
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         signal: controller.signal,
@@ -1302,17 +1290,7 @@ export async function runAgent(win: BrowserWindow, params: AgentRunParams): Prom
       }
 
       const acc: StreamDeltaAcc = { content: '', reasoning: '', toolCalls: new Map(), finishReason: null }
-      for await (const line of sseLines(res)) {
-        const t = line.trim()
-        if (!t.startsWith('data:')) continue
-        const data = t.slice(5).trim()
-        if (data === '[DONE]') continue
-        let json: Record<string, unknown>
-        try {
-          json = JSON.parse(data) as Record<string, unknown>
-        } catch {
-          continue
-        }
+      for await (const json of streamEvents(res)) {
         const choice = (json.choices as Record<string, unknown>[] | undefined)?.[0]
         if (!choice) continue
         const delta = (choice.delta || {}) as Record<string, unknown>
@@ -1436,13 +1414,16 @@ export function applyProposal(id: string): { ok: boolean; status: EditProposal['
 
   p.status = 'accepting'
   try {
-    const current = readTextFile(p.book, p.target)
+    const current = p.target === '@global-memory'
+      ? JSON.stringify({ entries: memory.readGlobalEntries() }, null, 2)
+      : readTextFile(p.book, p.target)
     if (current !== p.baseContent) {
       p.status = 'conflict'
       p.message = '文件在提案生成后已被修改，为避免覆盖较新内容，本次提案未应用。请让智能体重新读取后再提一次。'
       return { ok: false, status: 'conflict', message: p.message }
     }
-    writeTextFile(p.book, p.target, p.newContent)
+    if (p.target === '@global-memory') memory.writeGlobalEntries(JSON.parse(p.newContent).entries)
+    else writeTextFile(p.book, p.target, p.newContent)
     p.status = 'accepted'
     p.message = '变更已应用并保存到本机。'
     return { ok: true, status: 'accepted', message: p.message }

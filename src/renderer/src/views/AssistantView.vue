@@ -4,9 +4,9 @@ import { useAppStore } from '../store/app'
 import { useLibraryStore } from '../store/library'
 import { useConversationStore } from '../store/conversation'
 import { onHeaderAction } from '../ui/headerActions'
-import { inkConfirm } from '../ui/inkPrompt'
+import { toolConfirm } from '../ui/toolPrompt'
 import AgentConversation from '../components/conversation/AgentConversation.vue'
-import InkButton from '../ui/InkButton.vue'
+import ToolButton from '../ui/ToolButton.vue'
 import { usePanelDrag } from '../ui/usePanelDrag'
 import { Download, Plus, Trash2, Sparkles, Clock } from 'lucide-vue-next'
 
@@ -51,7 +51,7 @@ let offHeader: (() => void) | null = null
 
 /** 删除会话不可恢复，先确认再动手 */
 async function removeConversation(id: string, title: string) {
-  const ok = await inkConfirm(`确定删除会话「${title || '新会话'}」？`, {
+  const ok = await toolConfirm(`确定删除会话「${title || '新会话'}」？`, {
     detail: '该会话的全部对话内容将被移除，此操作不可恢复。',
     confirmText: '删除',
     danger: true
@@ -76,8 +76,8 @@ onUnmounted(() => {
 
 <template>
   <div v-if="!lib.current" class="h-full flex flex-col items-center justify-center text-[var(--text-faint)] gap-4">
-    <p>先打开一部作品，妙笔才能读到你的稿子</p>
-    <InkButton @click="app.go('bookshelf')">去书架</InkButton>
+    <p>先打开一部作品，创作助手才能读到你的稿子</p>
+    <ToolButton @click="app.go('bookshelf')">去书架</ToolButton>
   </div>
 
   <div v-else class="h-full flex">
@@ -95,7 +95,7 @@ onUnmounted(() => {
         >
           <Plus :size="13" /> 新建会话
         </button>
-        <input v-model="listQuery" class="ink-input h-7 py-0 text-[12px]" placeholder="搜索会话…" />
+        <input v-model="listQuery" class="tool-input h-7 py-0 text-[12px]" placeholder="搜索会话…" />
       </div>
 
       <div class="flex-1 overflow-y-auto py-1.5 px-1.5 space-y-0.5">

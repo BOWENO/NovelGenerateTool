@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '../../store/app'
 import { useLibraryStore } from '../../store/library'
 import { useConversationStore } from '../../store/conversation'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import GraphCanvas, { type CanvasNode, type CanvasEdge } from './GraphCanvas.vue'
 import { Plus, Sparkles, LayoutGrid, Maximize2, Shrink, ZoomIn, ZoomOut, Trash2, Network } from 'lucide-vue-next'
 
@@ -149,7 +149,7 @@ function addNode() {
 async function removeNode(id: string) {
   const n = nodes.value.find((x) => x.id === id)
   if (!n) return
-  const ok = await inkConfirm(`确定删除「${n.label}」及其连线？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除「${n.label}」及其连线？`, { confirmText: '删除', danger: true })
   if (!ok) return
   nodes.value = nodes.value.filter((x) => x.id !== id)
   edges.value = edges.value.filter((e) => e.source !== id && e.target !== id)
@@ -219,9 +219,9 @@ function onFileChanged(e: Event) {
 
 onMounted(() => {
   void load()
-  window.addEventListener('inkdesk:file-changed', onFileChanged)
+  window.addEventListener('novelgeneratetool:file-changed', onFileChanged)
 })
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 </script>
 
 <template>
@@ -350,10 +350,10 @@ onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChang
               <Trash2 :size="12" /> 删除
             </button>
           </div>
-          <input v-model="picked.label" class="ink-input" placeholder="节点标题" />
+          <input v-model="picked.label" class="tool-input" placeholder="节点标题" />
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5">节点类型</div>
-            <InkSelect v-model="picked.kind" class="w-full" :options="Object.entries(KIND_LABEL).map(([k, v]) => ({ label: v, value: k }))" />
+            <ToolSelect v-model="picked.kind" class="w-full" :options="Object.entries(KIND_LABEL).map(([k, v]) => ({ label: v, value: k }))" />
           </div>
           <div class="flex items-center gap-3">
             <label class="flex items-center gap-1.5 text-[12px] text-[var(--text-dim)] cursor-pointer">
@@ -377,7 +377,7 @@ onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChang
                 >✕</button>
               </span>
             </div>
-            <InkSelect
+            <ToolSelect
               class="w-full"
               :model-value="''"
               :options="lib.chapterList().filter((x) => !picked.chapters.includes(x.path)).map((x) => ({ label: `+ ${x.path.replace('正文/', '')}`, value: x.path }))"
@@ -385,7 +385,7 @@ onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChang
               @update:model-value="(v: string) => addChapter(v)"
             />
           </div>
-          <textarea v-model="picked.desc" rows="4" class="ink-textarea" placeholder="这个节点发生了什么" />
+          <textarea v-model="picked.desc" rows="4" class="tool-textarea" placeholder="这个节点发生了什么" />
           <button class="text-[11.5px] flex items-center gap-1 text-[var(--text-dim)] hover:text-[var(--accent)] cursor-pointer" :disabled="busy" @click="askAgent('relations')">
             <Sparkles :size="12" /> 让故事线智能体顺便整理角色关系图
           </button>

@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join, normalize, sep } from 'path'
-import { getLibraryRoot } from './library'
+import { getLibraryRoot, readTextFile, writeTextFile } from './library'
+import { atomicWrite } from './atomic'
+import { createHash } from 'crypto'
 
 /**
  * 结构化资料数据（时间线 / 故事线 / 角色关系图）。
@@ -73,6 +75,7 @@ const CHAR_GRAPH_FILE = join('角色', '关系图.json')
 const LEGACY_TIMELINE_MD = '时间线.md'
 
 function bookRoot(book: string): string {
+  if (!book || book === '.' || book === '..' || /[\\/:*?"<>|]/.test(book)) throw new Error('非法作品名')
   return normalize(join(getLibraryRoot(), book))
 }
 
@@ -97,7 +100,7 @@ function readJson<T>(book: string, rel: string, fallback: T): T {
 function writeJson(book: string, rel: string, data: unknown): void {
   const p = resolve(book, rel)
   mkdirSync(join(p, '..'), { recursive: true })
-  writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8')
+  atomicWrite(p, JSON.stringify(data, null, 2))
 }
 
 function uid(prefix: string): string {
@@ -1032,6 +1035,7 @@ export function writeOutline(book: string, entries: unknown): OutlineEntry[] {
 
 /** 工作流提取产物（AI 输出的 JSON 解析结果，字段全部可选、形状宽松） */
 export interface WorkflowExtract {
+  origin?: { kind: 'planning' | 'manuscript'; rel?: string; sha256?: string; chapterNo?: number }
   dict?: unknown[]
   power?: { realms?: unknown[]; rules?: string; chars?: unknown[] }
   maps?: unknown[]
@@ -1040,6 +1044,12 @@ export interface WorkflowExtract {
 
 /** 以 preserve 增量合并写入：没提到的现有条目自动保留；有变化才落盘。返回各板块条目数 + 新登记名单（added，供章末摘要） */
 export function registerWorkflowStructure(book: string, data: WorkflowExtract): Record<string, number | { added: string[] }> {
+  if (data.origin?.kind === 'manuscript') {
+    const source = readTextFile(book, data.origin.rel || '')
+    if (!data.origin.rel?.startsWith('正文/') || createHash('sha256').update(source).digest('hex') !== data.origin.sha256) {
+      throw new Error('登记来源正文已变化，资料未写入。请使用当前采用稿重新提取。')
+    }
+  }
   const result: Record<string, number | { added: string[] }> = { dict: -1, realms: -1, mapNodes: -1, graphNodes: -1 }
 
   if (Array.isArray(data.dict) && data.dict.length) {
@@ -1088,6 +1098,12 @@ export function registerWorkflowStructure(book: string, data: WorkflowExtract): 
     result.graphAdded = { added: merged.nodes.map((n) => n.name).filter((n) => !prevNames.has(n)).slice(0, 20) }
   }
 
+  if (data.origin) {
+    const rel = '报告/资料登记来源.json'
+    const previous = JSON.parse(readTextFile(book, rel) || '[]')
+    previous.push({ ...data.origin, at: new Date().toISOString(), result })
+    writeTextFile(book, rel, JSON.stringify(previous, null, 2))
+  }
   return result
 }
 

@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 
 /**
- * 去AI味面板共享状态：组件卸载重挂（切页面）不丢结果。
+ * 风格检查面板共享状态：组件卸载重挂（切页面）不丢结果。
  * 改写/诊断进行中切页，流式输出会继续写回这里，回来即可看到完整结果。
  */
 export const deaiState = reactive({

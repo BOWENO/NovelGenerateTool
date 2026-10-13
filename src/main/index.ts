@@ -9,6 +9,8 @@ import { initUpdater } from './lib/updater'
 import { migrateAllCharacterFiles } from './lib/characters'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
+app.setName('NovelGenerateTool')
+app.setPath('userData', process.env.NOVELGENERATETOOL_DATA_DIR || join(app.getPath('appData'), 'NovelGenerateTool'))
 if (isDev) {
   // 开发时不走 HTTP 缓存：否则改了渲染层代码，窗口仍会加载到旧模块
   app.commandLine.appendSwitch('disable-http-cache')
@@ -16,12 +18,13 @@ if (isDev) {
 
 /** 应用图标：只要图标文件在就显式设置（开发/预览模式 electron.exe 自带的是默认图标，必须覆盖；打包后 exe 已带同款图标，设置了也无害） */
 function windowIcon(): string | undefined {
-  const p = join(app.getAppPath(), 'build/icon.ico')
+  const p = app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'build/icon.png')
   return existsSync(p) ? p : undefined
 }
 
 function createWindow(): void {
   const win = new BrowserWindow({
+    title: 'NovelGenerateTool',
     width: 1480,
     height: 920,
     minWidth: 1080,

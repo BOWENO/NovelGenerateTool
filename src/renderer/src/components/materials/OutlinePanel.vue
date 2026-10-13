@@ -3,8 +3,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
 import { useAppStore } from '../../store/app'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { ListChecks, Plus, Trash2, WandSparkles } from 'lucide-vue-next'
 import type { OutlineEntry } from '../../types'
 
@@ -86,7 +86,7 @@ async function seedFromWorkflow() {
 async function removeEntry(id: string) {
   const e = entries.value.find((x) => x.id === id)
   if (!e) return
-  const ok = await inkConfirm(`删除第 ${e.no} 章的细纲条目？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除第 ${e.no} 章的细纲条目？`, { confirmText: '删除', danger: true })
   if (!ok) return
   entries.value = entries.value.filter((x) => x.id !== id)
   if (selectedId.value === id) selectedId.value = entries.value[0]?.id || ''
@@ -96,7 +96,7 @@ async function removeEntry(id: string) {
 /** 交给智能体：从大纲梳理全书逐章细纲（走写入提案） */
 async function askAgent() {
   if (!lib.current) return
-  app.goAskAgent() // 切到妙笔页，用户能直接看到流式生成
+  app.goAskAgent() // 切到创作助手页，用户能直接看到流式生成
   const { useConversationStore } = await import('../../store/conversation')
   const conv = useConversationStore()
   await conv.askWith(
@@ -110,8 +110,8 @@ function onFileChanged(e: Event) {
   const p = (e as CustomEvent<{ path?: string }>).detail?.path
   if (p === '细纲.json') void load()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 watch(book, () => void load())
 onMounted(() => void load())
@@ -182,24 +182,24 @@ onMounted(() => void load())
           <div class="flex gap-3">
             <div class="w-24 shrink-0">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">章节号</div>
-              <input v-model.number="selected.no" type="number" min="1" class="ink-input" @change="persist" />
+              <input v-model.number="selected.no" type="number" min="1" class="tool-input" @change="persist" />
             </div>
             <div class="flex-1">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">章节标题</div>
-              <input v-model="selected.title" class="ink-input" placeholder="如：夜探藏经阁" @change="persist" />
+              <input v-model="selected.title" class="tool-input" placeholder="如：夜探藏经阁" @change="persist" />
             </div>
             <div class="w-36 shrink-0">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">状态</div>
-              <InkSelect v-model="selected.status" class="w-full" :options="STATUSES.map((s) => ({ label: s, value: s }))" @change="persist" />
+              <ToolSelect v-model="selected.status" class="w-full" :options="STATUSES.map((s) => ({ label: s, value: s }))" @change="persist" />
             </div>
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">所属卷（可空）</div>
-            <input v-model="selected.vol" class="ink-input" placeholder="如：第一卷·初入宗门" @change="persist" />
+            <input v-model="selected.vol" class="tool-input" placeholder="如：第一卷·初入宗门" @change="persist" />
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">本章细纲（一句话到三句话）</div>
-            <textarea v-model="selected.beat" rows="6" class="ink-textarea" placeholder="这一章发生什么、推进什么、埋什么钩子" @change="persist" />
+            <textarea v-model="selected.beat" rows="6" class="tool-textarea" placeholder="这一章发生什么、推进什么、埋什么钩子" @change="persist" />
           </div>
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider flex items-center gap-1.5">
@@ -212,7 +212,7 @@ onMounted(() => void load())
             <textarea
               v-model="selected.beatFull"
               rows="10"
-              class="ink-textarea"
+              class="tool-textarea"
               placeholder="完整的章节细纲：场景顺序拆解、出场角色、关键转折与钩子。留空则逐章生文时现场构思。智能体经 write_outline_plan 提交的全文会自动存到这里"
               @change="persist"
             />

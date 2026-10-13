@@ -4,7 +4,7 @@
 import { computed, ref, watch } from 'vue'
 import { useAppStore } from '../../store/app'
 import { useLibraryStore } from '../../store/library'
-import { analyzeHumanSignal } from '../../lib/human-signal'
+import { analyzeTextPatterns } from '../../lib/text-check'
 import { ScanSearch, LoaderCircle, X, ChevronRight, CircleX, CircleAlert, Info } from 'lucide-vue-next'
 
 const props = defineProps<{ book: string; open: boolean }>()
@@ -32,7 +32,7 @@ const progress = ref(0)
 const total = ref(0)
 const findings = ref<Finding[]>([])
 const stopFlag = ref(false)
-/** 已扫描章节数与毒句总数，给完成摘要用 */
+/** 已扫描章节数与句式提示数，给完成摘要用 */
 const scannedCount = ref(0)
 const redCardTotal = ref(0)
 
@@ -103,13 +103,15 @@ async function scan() {
 
       // 1. 死亡/离场角色现身（疑似吃书）
       for (const g of ghosts) {
-        if (text.includes(g.name)) {
+        const registeredAt = Number(g.lastChapter?.match(/(\d+)/)?.[1] || 0)
+        if (registeredAt && ch.no > registeredAt && text.includes(g.name)) {
           out.push({ level: 'red', path: ch.path, no: ch.no, kind: '疑似吃书', text: `「${g.name}」登记状态是${g.status}，却出现在本章。若为回忆 / 闪回 / 遗言可忽略。` })
         }
       }
       // 2. 受伤/闭关角色现身
       for (const s of warns) {
-        if (text.includes(s.name)) {
+        const registeredAt = Number(s.lastChapter?.match(/(\d+)/)?.[1] || 0)
+        if (registeredAt && ch.no >= registeredAt && text.includes(s.name)) {
           out.push({ level: 'yellow', path: ch.path, no: ch.no, kind: '状态未交代', text: `「${s.name}」登记状态是${s.status}——文中出现时记得交代伤势恢复 / 出关缘由。` })
         }
       }
@@ -124,15 +126,16 @@ async function scan() {
           }
         }
       }
-      // 4. AI 毒句红牌
-      const rc = analyzeHumanSignal(text, 'fiction').redCards
+      // 4. 常见句式提示
+      const rc = analyzeTextPatterns(text, 'fiction').redCards
       redCardTotal.value += rc.length
       for (const r of rc.slice(0, 3)) {
-        out.push({ level: 'red', path: ch.path, no: ch.no, kind: `毒句·${r.label}`, text: `${r.sample}…（${r.hint}）` })
+        out.push({ level: 'yellow', path: ch.path, no: ch.no, kind: `句式·${r.label}`, text: `${r.sample}…（${r.hint}）` })
       }
       // 记录伏笔关键字是否在任何章出现（扫完后判定久悬）
       for (const x of openFs) {
-        if (!fsMention.get(x.id) && text.includes(x.content.slice(0, 6))) fsMention.set(x.id, true)
+        const plantedAt = Number(x.plantChapter?.match(/(\d+)/)?.[1] || 0)
+        if (plantedAt && ch.no > plantedAt && !fsMention.get(x.id) && text.includes(x.content.slice(0, 6))) fsMention.set(x.id, true)
       }
     }
 
@@ -181,7 +184,7 @@ watch(
         <!-- 头部 -->
         <div class="shrink-0 flex items-center gap-2 px-5 py-3.5 border-b border-[var(--border)]">
           <ScanSearch :size="15" :style="{ color: 'var(--accent)' }" />
-          <span class="font-serif-ink text-[16px]">全书一致性体检</span>
+          <span class="font-serif-tool text-[16px]">全书一致性体检</span>
           <div class="flex-1" />
           <button class="text-[var(--text-faint)] hover:text-[var(--text)] cursor-pointer" @click="emit('close')"><X :size="16" /></button>
         </div>
@@ -189,7 +192,7 @@ watch(
         <!-- 操作区 -->
         <div class="shrink-0 px-5 py-3 border-b border-[var(--border)] flex items-center gap-3">
           <p class="text-[11.5px] text-[var(--text-faint)] leading-5 flex-1">
-            跑遍全部正文章节：死亡/离场角色现身、状态未交代、细纲未落地、AI 毒句红牌、久悬伏笔。纯本地匹配零 AI 成本。
+            跑遍全部正文章节：死亡/离场角色现身、状态未交代、细纲未落地、常见句式提示、久悬伏笔。纯本地匹配零 AI 成本。
           </p>
           <button
             v-if="!scanning"
@@ -222,8 +225,8 @@ watch(
           <span>已扫 {{ scannedCount }} 章</span>
           <span :style="{ color: LEVEL_COLOR.red }">红 {{ redCount }}</span>
           <span :style="{ color: LEVEL_COLOR.yellow }">黄 {{ yellowCount }}</span>
-          <span style="color: var(--accent)">毒句共 {{ redCardTotal }} 处</span>
-          <span v-if="!findings.length" class="ml-auto" style="color: var(--accent)">全书零问题，很干净</span>
+          <span style="color: var(--accent)">句式提示 {{ redCardTotal }} 项</span>
+          <span v-if="!findings.length" class="ml-auto" style="color: var(--accent)">本次规则未发现待核查项</span>
         </div>
 
         <!-- 清单 -->

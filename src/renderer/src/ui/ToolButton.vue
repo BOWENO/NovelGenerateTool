@@ -22,7 +22,7 @@ function ripple(e: MouseEvent) {
 <template>
   <button
     ref="el"
-    class="ink-ripple inline-flex items-center gap-1.5 rounded-[var(--radius)] px-4 py-2 text-sm cursor-pointer select-none transition-colors"
+    class="tool-ripple inline-flex items-center gap-1.5 rounded-[var(--radius)] px-4 py-2 text-sm cursor-pointer select-none transition-colors"
     :class="{
       'bg-[var(--accent)] text-[#1a150c] font-medium hover:brightness-110': props.variant !== 'ghost' && props.variant !== 'danger',
       'bg-[var(--panel-2)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--hover)]': props.variant === 'ghost',

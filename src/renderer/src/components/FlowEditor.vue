@@ -6,8 +6,8 @@ import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/controls/dist/style.css'
-import InkButton from '../ui/InkButton.vue'
-import { inkPrompt } from '../ui/inkPrompt'
+import ToolButton from '../ui/ToolButton.vue'
+import { toolPrompt } from '../ui/toolPrompt'
 
 const props = defineProps<{ modelValue: string; kind: 'relation' | 'mindmap' }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
@@ -67,12 +67,12 @@ watch(() => props.modelValue, syncIn, { immediate: true })
 watch([nodes, edges], serialize, { deep: true })
 
 onConnect(async (c: Connection) => {
-  const label = await inkPrompt('关系 / 连线说明（可留空）', '')
+  const label = await toolPrompt('关系 / 连线说明（可留空）', '')
   addEdges([{ ...c, label: label || undefined, style: { stroke: 'var(--text-faint)' }, labelStyle: { fill: 'var(--text-dim)', fontSize: 11 } }])
 })
 
 onNodeDoubleClick(async ({ node }) => {
-  const label = await inkPrompt('修改名称', String(node.data?.label ?? ''))
+  const label = await toolPrompt('修改名称', String(node.data?.label ?? ''))
   if (label) {
     node.data = { ...node.data, label }
     serialize()
@@ -80,7 +80,7 @@ onNodeDoubleClick(async ({ node }) => {
 })
 
 async function addNode() {
-  const label = await inkPrompt('名称（角色名 / 故事节点）', '')
+  const label = await toolPrompt('名称（角色名 / 故事节点）', '')
   if (!label) return
   const id = `n${Date.now()}`
   const n = parse(props.modelValue)
@@ -106,8 +106,8 @@ async function deleteSelected() {
       <Controls position="bottom-right" />
     </VueFlow>
     <div class="absolute top-3 left-3 flex gap-2 z-10">
-      <InkButton @click="addNode">添加节点</InkButton>
-      <InkButton variant="ghost" @click="deleteSelected">删除选中</InkButton>
+      <ToolButton @click="addNode">添加节点</ToolButton>
+      <ToolButton variant="ghost" @click="deleteSelected">删除选中</ToolButton>
     </div>
     <div class="absolute bottom-3 left-3 text-[11px] text-[var(--text-faint)] z-10">
       双击节点改名 · 拖动节点边缘连线 · 拖拽可调整布局（自动保存）

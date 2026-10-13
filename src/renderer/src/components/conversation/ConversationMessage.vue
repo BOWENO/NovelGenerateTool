@@ -63,8 +63,8 @@ const pendingApproval = computed(
   <!-- 助手消息 -->
   <div v-else class="space-y-2.5">
     <div class="flex items-center gap-2 text-[11px] text-[var(--text-faint)]">
-      <span class="font-serif-ink text-[12px]" :style="{ color: 'var(--accent)' }">{{ agentName }}</span>
-      <span v-if="streaming" class="ink-dots"><span /><span /><span /></span>
+      <span class="font-serif-tool text-[12px]" :style="{ color: 'var(--accent)' }">{{ agentName }}</span>
+      <span v-if="streaming" class="tool-dots"><span /><span /><span /></span>
       <span v-else-if="message.status === 'aborted'">已停止</span>
       <span v-else-if="message.status === 'error'" style="color: #e08a7a">运行失败</span>
     </div>

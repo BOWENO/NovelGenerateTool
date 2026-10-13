@@ -1,14 +1,14 @@
-appId: com.dawo.app
-productName: DAWO
+appId: local.novelgeneratetool.app
+productName: NovelGenerateTool
 directories:
   output: release
 files:
   - out/**
-publish:
-  provider: github
-  owner: dawo4
-  repo: DAWO
 extraResources:
+  - from: build/icon.png
+    to: icon.png
+  - from: NOTICE.md
+    to: SOURCE-NOTICE.md
   - from: resources/preset-libraries
     to: preset-libraries
     filter:
@@ -16,9 +16,13 @@ extraResources:
 win:
   target: nsis
   icon: build/icon.ico
+linux:
+  target: dir
+  icon: build/icon.png
+  category: Office
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  shortcutName: DAWO
+  shortcutName: NovelGenerateTool
 electronLanguages:
   - zh-CN

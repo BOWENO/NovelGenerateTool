@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '../../store/app'
 import { useLibraryStore } from '../../store/library'
 import { useConversationStore } from '../../store/conversation'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { Plus, Sparkles, TriangleAlert, ArrowUpDown, Clock, Trash2, WandSparkles } from 'lucide-vue-next'
 
 const app = useAppStore()
@@ -130,7 +130,7 @@ function addNode(at?: number) {
 async function removeNode(id: string) {
   const node = nodes.value.find((n) => n.id === id)
   if (!node) return
-  const ok = await inkConfirm(`确定删除「${node.title}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除「${node.title}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   nodes.value = nodes.value.filter((n) => n.id !== id)
   nodes.value.forEach((n, i) => (n.sortKey = i))
@@ -192,10 +192,10 @@ function onFileChanged(e: Event) {
 
 onMounted(() => {
   void load()
-  window.addEventListener('inkdesk:file-changed', onFileChanged)
+  window.addEventListener('novelgeneratetool:file-changed', onFileChanged)
 })
 
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 defineExpose({ reload: load })
 </script>
@@ -386,13 +386,13 @@ defineExpose({ reload: load })
 
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">事件标题</div>
-            <input v-model="selected.title" class="ink-input" placeholder="例如：许七安入打更人" />
+            <input v-model="selected.title" class="tool-input" placeholder="例如：许七安入打更人" />
           </div>
 
           <div class="flex gap-3">
             <div class="flex-1">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">时间</div>
-              <input v-model="selected.time" class="ink-input" placeholder="入冬第三日 / 三年前" />
+              <input v-model="selected.time" class="tool-input" placeholder="入冬第三日 / 三年前" />
             </div>
             <div class="w-40 shrink-0">
               <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">主线 / 支线</div>
@@ -428,7 +428,7 @@ defineExpose({ reload: load })
                 >✕</button>
               </span>
             </div>
-            <InkSelect
+            <ToolSelect
               class="w-full"
               :model-value="''"
               :options="chapters.filter((c) => !selected.chapters.includes(c)).map((c) => ({ label: `+ ${c.replace('正文/', '')}`, value: c }))"
@@ -439,14 +439,14 @@ defineExpose({ reload: load })
 
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">事件说明</div>
-            <textarea v-model="selected.desc" rows="5" class="ink-textarea" placeholder="发生了什么、牵扯到谁、后续影响" />
+            <textarea v-model="selected.desc" rows="5" class="tool-textarea" placeholder="发生了什么、牵扯到谁、后续影响" />
           </div>
 
           <div>
             <div class="text-[11px] text-[var(--text-faint)] mb-1.5 tracking-wider">涉及角色（逗号分隔）</div>
             <input
               :value="selected.characters.join('，')"
-              class="ink-input"
+              class="tool-input"
               placeholder="许七安，魏渊"
               @input="selected.characters = ($event.target as HTMLInputElement).value.split(/[,，]/).map((s) => s.trim()).filter(Boolean)"
             />

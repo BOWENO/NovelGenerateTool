@@ -3,8 +3,8 @@ import { computed, onActivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '../store/app'
 import { useLibraryStore } from '../store/library'
 import { onHeaderAction } from '../ui/headerActions'
-import { inkConfirm, inkPrompt } from '../ui/inkPrompt'
-import InkSelect from '../ui/InkSelect.vue'
+import { toolConfirm, toolPrompt } from '../ui/toolPrompt'
+import ToolSelect from '../ui/ToolSelect.vue'
 import { aiRun } from '../ai'
 import {
   BookOpen,
@@ -302,7 +302,7 @@ async function open(title: string) {
 
 async function remove(title: string) {
   menuFor.value = ''
-  const ok = await inkConfirm(`确定删除《${title}》？`, {
+  const ok = await toolConfirm(`确定删除《${title}》？`, {
     detail: '书籍文件夹将被移除，此操作不可恢复。',
     confirmText: '删除',
     danger: true
@@ -317,7 +317,7 @@ async function remove(title: string) {
 /** 给某本书改名（标题即目录名，会同步重命名目录） */
 async function rename(title: string) {
   menuFor.value = ''
-  const v = await inkPrompt('新的书名', title)
+  const v = await toolPrompt('新的书名', title)
   if (!v || v === title) return
   error.value = ''
   try {
@@ -330,7 +330,7 @@ async function rename(title: string) {
 
 async function setGroup(title: string) {
   menuFor.value = ''
-  const v = await inkPrompt('移动到分组（留空表示未分组）', '')
+  const v = await toolPrompt('移动到分组（留空表示未分组）', '')
   if (v === null) return
   await window.api.bookMetaWrite(title, { group: v.trim() })
   await lib.loadBooks()
@@ -412,7 +412,7 @@ onUnmounted(() => {
             <span class="h-px w-7" style="background: var(--accent)" />
             <span class="text-[10.5px] tracking-[0.22em] text-[var(--text-faint)]">书架</span>
           </div>
-          <h1 class="font-serif-ink text-2xl mb-1.5">{{ greeting }}</h1>
+          <h1 class="font-serif-tool text-2xl mb-1.5">{{ greeting }}</h1>
           <div class="flex gap-6 text-[12.5px] text-[var(--text-dim)]">
             <span>作品 <b style="color: var(--accent)">{{ lib.books.length }}</b></span>
             <span>今日手写 <b style="color: var(--accent)">{{ todayTotal.handwritten }}</b> 字</span>
@@ -497,7 +497,7 @@ onUnmounted(() => {
               :style="{ background: `linear-gradient(150deg, ${coverColor(b.title)}, ${coverColor(b.title)}99)` }"
             >
               <span
-                class="font-serif-ink text-white/90 text-[13px] leading-[1.15] tracking-wide px-1 text-center"
+                class="font-serif-tool text-white/90 text-[13px] leading-[1.15] tracking-wide px-1 text-center"
                 style="writing-mode: vertical-rl; max-height: 76px; overflow: hidden"
               >
                 {{ b.title }}
@@ -506,7 +506,7 @@ onUnmounted(() => {
 
             <!-- 信息 -->
             <div class="flex-1 min-w-0 flex flex-col">
-              <div class="font-serif-ink text-[16px] truncate">{{ b.title }}</div>
+              <div class="font-serif-tool text-[16px] truncate">{{ b.title }}</div>
               <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 <span class="text-[10.5px] px-1.5 py-0.5 rounded-md bg-[var(--bg-soft)] text-[var(--text-dim)]">
                   {{ b.genre }}
@@ -568,7 +568,7 @@ onUnmounted(() => {
         <!-- 表单页头部 -->
         <div class="shrink-0 flex items-center gap-3 px-8 h-14 border-b border-[var(--border)]">
           <span class="w-0.5 h-4 rounded-full" :style="{ background: 'var(--accent)' }" />
-          <span class="font-serif-ink text-[17px]">{{ editingBook ? '编辑作品信息' : '新建作品' }}</span>
+          <span class="font-serif-tool text-[17px]">{{ editingBook ? '编辑作品信息' : '新建作品' }}</span>
           <div class="flex-1" />
           <button
             class="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-dim)] hover:text-[var(--text)] hover:bg-[var(--hover)] cursor-pointer"
@@ -594,7 +594,7 @@ onUnmounted(() => {
               >
                 <template v-if="newTitle.trim()">
                   <span
-                    class="font-serif-ink text-white/90 text-[20px] leading-[1.2] tracking-wide px-3 text-center"
+                    class="font-serif-tool text-white/90 text-[20px] leading-[1.2] tracking-wide px-3 text-center"
                     style="writing-mode: vertical-rl; max-height: 250px; overflow: hidden"
                   >
                     {{ newTitle }}
@@ -616,7 +616,7 @@ onUnmounted(() => {
               <!-- 书名 -->
               <div>
                 <div class="field-label">书名 <span style="color: var(--accent)">*</span></div>
-                <input v-model="newTitle" class="ink-input text-[15px]" placeholder="请输入作品名称" @keyup.enter="create" />
+                <input v-model="newTitle" class="tool-input text-[15px]" placeholder="请输入作品名称" @keyup.enter="create" />
               </div>
 
               <!-- 首发平台 -->
@@ -671,11 +671,11 @@ onUnmounted(() => {
               <div class="flex gap-4">
                 <div class="w-52 shrink-0">
                   <div class="field-label">分类</div>
-                  <InkSelect v-model="newGenre" class="w-full" :options="GENRES.map((g) => ({ label: g, value: g }))" />
+                  <ToolSelect v-model="newGenre" class="w-full" :options="GENRES.map((g) => ({ label: g, value: g }))" />
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="field-label">作品分组</div>
-                  <input v-model="newGroup" class="ink-input" placeholder="未分组" :list="'grp-list'" />
+                  <input v-model="newGroup" class="tool-input" placeholder="未分组" :list="'grp-list'" />
                   <datalist id="grp-list">
                     <option v-for="g in groupNames" :key="g" :value="g" />
                   </datalist>
@@ -746,7 +746,7 @@ onUnmounted(() => {
                 <textarea
                   v-model="newIdea"
                   rows="6"
-                  class="ink-textarea text-[13px]"
+                  class="tool-textarea text-[13px]"
                   :placeholder="`写下故事核、卖点、主角设定……越具体，智能体越能理解你的想法。也可以点上方「生成」让 AI 按当前定位先出一版。`"
                 />
                 <div class="text-right text-[11px] text-[var(--text-faint)] mt-1">
@@ -780,7 +780,7 @@ onUnmounted(() => {
       <!-- 迁移向导：散落书稿（txt/md/docx 多选）归类成书 -->
       <div v-if="showMigrate" class="fixed inset-0 z-[76] flex items-center justify-center bg-black/50" @click.self="showMigrate = false">
         <div class="w-[440px] rounded-xl border border-[var(--border)] bg-[var(--panel)] p-6 space-y-4" style="box-shadow: var(--shadow)">
-          <div class="font-serif-ink text-lg">迁移书稿</div>
+          <div class="font-serif-tool text-lg">迁移书稿</div>
           <p class="text-xs text-[var(--text-faint)] leading-5">
             把散落在外面的书稿（TXT / Markdown / Word docx，可多选）归类成书。支持 GBK 等编码自动探测；大文件按「第N章」标题自动拆章。
           </p>
@@ -799,7 +799,7 @@ onUnmounted(() => {
           </div>
           <div v-if="migrateMode === 'merge'">
             <div class="field-label">目标书名</div>
-            <input v-model="mergeTitle" class="ink-input" placeholder="如：旧稿合集" />
+            <input v-model="mergeTitle" class="tool-input" placeholder="如：旧稿合集" />
           </div>
           <div v-if="migrateResult" class="text-[12px] leading-5 rounded-lg border border-[var(--border)] p-3">
             <div style="color: var(--accent)">完成：建成 {{ migrateResult.books.length }} 本{{ migrateResult.chapters ? `，拆出 ${migrateResult.chapters} 章` : '' }}</div>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useLibraryStore } from '../../store/library'
-import InkButton from '../../ui/InkButton.vue'
-import { inkConfirm } from '../../ui/inkPrompt'
+import ToolButton from '../../ui/ToolButton.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
 import ProposalDiff from '../conversation/ProposalDiff.vue'
 import { History, RotateCcw, FileText } from 'lucide-vue-next'
 import type { DiffHunk } from '../../types'
@@ -73,7 +73,7 @@ async function pick(v: { file: string; at: string }) {
 
 async function restore() {
   if (!picked.value || restoring.value) return
-  const ok = await inkConfirm('恢复这个历史版本？', {
+  const ok = await toolConfirm('恢复这个历史版本？', {
     detail: '当前内容会先自动存一份快照，可随时再恢复回来。',
     confirmText: '恢复'
   })
@@ -119,9 +119,9 @@ onMounted(() => void load())
         </span>
         <span v-else class="text-[12px] text-[var(--text-dim)]">版本差异</span>
         <div class="flex-1" />
-        <InkButton :disabled="!picked || restoring" @click="restore">
+        <ToolButton :disabled="!picked || restoring" @click="restore">
           <RotateCcw :size="13" /> {{ restoring ? '恢复中…' : '恢复此版本' }}
-        </InkButton>
+        </ToolButton>
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-[var(--border)]">
         <div v-if="diffLoading" class="h-full flex items-center justify-center text-[12px] text-[var(--text-faint)]">正在对比差异…</div>

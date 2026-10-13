@@ -3,6 +3,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { getLibraryRoot, listBooks, readTextFile } from './library'
+import { atomicWrite } from './atomic'
 
 const CHAR_DIR = '角色'
 const LEGACY_FILE = '角色/角色设定.md'
@@ -27,12 +28,15 @@ export function splitCharacterText(text: string): CharacterSection[] {
   const lines = text.split(/\r?\n/)
   const raw: { name: string; lines: string[] }[] = []
   let cur: { name: string; lines: string[] } | null = null
-  const headRe = /^#{1,4}\s*(.+?)\s*$/
+  // 最浅标题区分角色；性格/经历等子标题留在角色卡内。
+  const headings = lines.map((line) => /^(#{1,4})\s+(.+?)\s*$/.exec(line)).filter(Boolean)
+  const level = Math.min(...headings.map((m) => m![1].length))
+  const headRe = /^(#{1,4})\s+(.+?)\s*$/
   for (const line of lines) {
     const m = line.match(headRe)
-    if (m) {
+    if (m && m[1].length === level) {
       if (cur) raw.push(cur)
-      cur = { name: sanitizeName(m[1]), lines: [line] }
+      cur = { name: sanitizeName(m[2]), lines: [line] }
     } else if (cur) {
       cur.lines.push(line)
     }
@@ -49,7 +53,7 @@ function writeSections(dir: string, sections: CharacterSection[], overwrite: boo
   for (const s of sections) {
     const target = join(dir, `${s.name}.md`)
     if (!overwrite && existsSync(target)) continue
-    writeFileSync(target, s.content, 'utf-8')
+    atomicWrite(target, s.content)
     count++
   }
   return count
@@ -65,7 +69,7 @@ export function saveCharactersFromText(book: string, text: string): { count: num
   mkdirSync(dir, { recursive: true })
   const sections = splitCharacterText(text)
   if (!sections.length) {
-    writeFileSync(join(root, LEGACY_FILE), text, 'utf-8')
+    atomicWrite(join(root, LEGACY_FILE), text)
     return { count: 1, legacy: true }
   }
   // 落档前清掉旧版整包文件：此后一人一档是唯一事实源，避免双源并存各改各的

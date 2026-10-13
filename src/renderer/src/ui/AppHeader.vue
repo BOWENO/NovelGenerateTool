@@ -83,7 +83,7 @@ function winClose(): void {
 
     <!-- 标题 -->
     <div class="shrink-0 min-w-0 flex items-baseline gap-2">
-      <span class="font-serif-ink text-[15px] whitespace-nowrap">{{ app.viewTitle }}</span>
+      <span class="font-serif-tool text-[15px] whitespace-nowrap">{{ app.viewTitle }}</span>
       <span v-if="subtitle" class="text-[11px] text-[var(--text-faint)] truncate max-w-[200px]">{{ subtitle }}</span>
     </div>
 

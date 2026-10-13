@@ -20,7 +20,7 @@ html[data-theme='dark'] {
   --glow-color: rgba(201, 161, 95, 0.07);
   --overlay-rgb: 20, 17, 13;
 }
-html[data-theme='ink-blue'] {
+html[data-theme='blue'] {
   --bg: #0e1218;
   --bg-soft: #121824;
   --panel: #16202e;
@@ -35,7 +35,7 @@ html[data-theme='ink-blue'] {
   --glow-color: rgba(120, 160, 220, 0.06);
   --overlay-rgb: 14, 18, 24;
 }
-html[data-theme='ink-green'] {
+html[data-theme='green'] {
   --bg: #0f1512;
   --bg-soft: #131b16;
   --panel: #17211a;
@@ -50,7 +50,7 @@ html[data-theme='ink-green'] {
   --glow-color: rgba(110, 180, 130, 0.06);
   --overlay-rgb: 15, 21, 18;
 }
-html[data-theme='ink-purple'] {
+html[data-theme='purple'] {
   --bg: #141018;
   --bg-soft: #1a1420;
   --panel: #201929;
@@ -95,7 +95,7 @@ html[data-theme='sepia'] {
   --glow-color: rgba(180, 140, 60, 0.06);
   --overlay-rgb: 239, 228, 205;
 }
-/* 月白风清：偏冷的月光纸白 */
+/* 灰白：偏冷的月光纸白 */
 html[data-theme='moon'] {
   --bg: #edf1f5;
   --bg-soft: #e2e8ee;
@@ -111,7 +111,7 @@ html[data-theme='moon'] {
   --glow-color: rgba(100, 140, 190, 0.06);
   --overlay-rgb: 237, 241, 245;
 }
-/* 青瓷雨霁：淡青瓷釉的浅绿纸面 */
+/* 青色：淡青瓷釉的浅绿纸面 */
 html[data-theme='celadon'] {
   --bg: #ebf1ea;
   --bg-soft: #dfe8de;
@@ -144,7 +144,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.font-serif-ink {
+.font-serif-tool {
   font-family: 'Source Han Serif SC', 'Noto Serif SC', 'STZhongsong', 'SimSun', serif;
 }
 
@@ -161,11 +161,11 @@ body {
 }
 
 /* ============ 通用交互 ============ */
-.ink-ripple {
+.tool-ripple {
   position: relative;
   overflow: hidden;
 }
-.ink-ripple .ripple-dot {
+.tool-ripple .ripple-dot {
   position: absolute;
   border-radius: 9999px;
   background: currentColor;
@@ -325,9 +325,9 @@ body.fx-rise .rise-in {
    这样 w-40 / w-36 / h-24 等工具类才能覆盖这里的默认值。
    （放在层外会形成「无层样式 > 有层样式」的优先级反转，导致所有宽度工具类失效） */
 @layer components {
-  .ink-input,
-  .ink-textarea,
-  .ink-select {
+  .tool-input,
+  .tool-textarea,
+  .tool-select {
     background: var(--bg-soft);
     border: 1px solid var(--border);
     color: var(--text);
@@ -337,16 +337,16 @@ body.fx-rise .rise-in {
     transition: border-color 0.2s;
     width: 100%;
   }
-  .ink-input:focus,
-  .ink-textarea:focus,
-  .ink-select:focus {
+  .tool-input:focus,
+  .tool-textarea:focus,
+  .tool-select:focus {
     border-color: var(--accent);
   }
-  .ink-textarea {
+  .tool-textarea {
     resize: vertical;
     line-height: 1.8;
   }
-  select.ink-select option {
+  select.tool-select option {
     background: var(--panel);
     color: var(--text);
   }
@@ -484,23 +484,23 @@ input[type='range']::-moz-range-thumb {
 }
 
 /* ============ 编辑器（TipTap） ============ */
-.ink-editor .tiptap {
+.tool-editor .tiptap {
   outline: none;
   min-height: 60%;
-  line-height: var(--ink-lh, 2);
-  font-size: var(--ink-fs, 16px);
+  line-height: var(--tool-lh, 2);
+  font-size: var(--tool-fs, 16px);
   letter-spacing: 0.02em;
 }
-.ink-editor .tiptap p {
-  margin: 0 0 var(--ink-para, 1em);
+.tool-editor .tiptap p {
+  margin: 0 0 var(--tool-para, 1em);
   text-indent: 2em;
 }
-.ink-editor .tiptap h1 {
+.tool-editor .tiptap h1 {
   font-size: 1.5em;
   margin: 0.6em 0 0.8em;
   text-indent: 0;
 }
-.ink-editor .tiptap p.is-editor-empty:first-child::before {
+.tool-editor .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--text-faint);
   float: left;
@@ -555,45 +555,45 @@ input[type='range']::-moz-range-thumb {
 }
 
 /* 滚动条下的正文区域 */
-.prose-ink {
-  max-width: var(--ink-measure, 720px);
+.prose-tool {
+  max-width: var(--tool-measure, 720px);
   margin: 0 auto;
   padding: 32px 40px 120px;
 }
 /* 排版设置（写作台「排版」面板）：字号 / 行高 / 字体 / 网格线，变量挂在编辑器容器上 */
-.ink-editor .tiptap {
-  font-size: var(--ink-fs, 16px);
-  line-height: var(--ink-lh, 2);
-  font-family: var(--ink-font, inherit);
+.tool-editor .tiptap {
+  font-size: var(--tool-fs, 16px);
+  line-height: var(--tool-lh, 2);
+  font-family: var(--tool-font, inherit);
 }
-.ink-editor .tiptap p {
-  margin: 0 0 var(--ink-para, 1em);
+.tool-editor .tiptap p {
+  margin: 0 0 var(--tool-para, 1em);
 }
 /* 稿纸网格线：实线 / 虚线，随行高铺在正文区背景 */
-.ink-grid-solid .tiptap,
-.ink-grid-dash .tiptap {
+.tool-grid-solid .tiptap,
+.tool-grid-dash .tiptap {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(var(--ink-lh, 2) * var(--ink-fs, 16px) - 1px),
-    var(--border) calc(var(--ink-lh, 2) * var(--ink-fs, 16px) - 1px),
-    var(--border) calc(var(--ink-lh, 2) * var(--ink-fs, 16px))
+    transparent calc(var(--tool-lh, 2) * var(--tool-fs, 16px) - 1px),
+    var(--border) calc(var(--tool-lh, 2) * var(--tool-fs, 16px) - 1px),
+    var(--border) calc(var(--tool-lh, 2) * var(--tool-fs, 16px))
   );
   background-attachment: local;
 }
 /* 稿纸模式：段落间距必须落在格子周期的整数倍上，否则从第二段起线会穿进文字。
    段间空行感用回车空行实现（空段落高度 = 一个格子，天然对齐） */
-.ink-grid-solid .tiptap p,
-.ink-grid-dash .tiptap p {
+.tool-grid-solid .tiptap p,
+.tool-grid-dash .tiptap p {
   margin-bottom: 0;
 }
-.ink-grid-dash .tiptap {
+.tool-grid-dash .tiptap {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(var(--ink-lh, 2) * var(--ink-fs, 16px) - 1px),
-    var(--border) calc(var(--ink-lh, 2) * var(--ink-fs, 16px) - 1px),
-    transparent calc(var(--ink-lh, 2) * var(--ink-fs, 16px))
+    transparent calc(var(--tool-lh, 2) * var(--tool-fs, 16px) - 1px),
+    var(--border) calc(var(--tool-lh, 2) * var(--tool-fs, 16px) - 1px),
+    transparent calc(var(--tool-lh, 2) * var(--tool-fs, 16px))
   );
 }
 
@@ -639,7 +639,7 @@ input[type='range']::-moz-range-thumb {
 }
 
 /* 加载指示 */
-.ink-dots span {
+.tool-dots span {
   display: inline-block;
   width: 5px;
   height: 5px;
@@ -648,10 +648,10 @@ input[type='range']::-moz-range-thumb {
   margin-right: 3px;
   animation: blink 1.2s infinite;
 }
-.ink-dots span:nth-child(2) {
+.tool-dots span:nth-child(2) {
   animation-delay: 0.2s;
 }
-.ink-dots span:nth-child(3) {
+.tool-dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
 @keyframes blink {
@@ -783,7 +783,7 @@ input[type='range']::-moz-range-thumb {
 }
 
 /* ============ 资料区竖栏：滚动条平时隐身，悬停浮现 3px 细条 ============ */
-/* 负边距补偿：滚动条悬浮在竖栏右缘外，按钮列与上下固定的妙笔/写作台保持同轴 */
+/* 负边距补偿：滚动条悬浮在竖栏右缘外，按钮列与上下固定的创作助手/写作台保持同轴 */
 .panel-rail-scroll {
   scrollbar-color: transparent transparent;
   width: calc(100% + 3px);

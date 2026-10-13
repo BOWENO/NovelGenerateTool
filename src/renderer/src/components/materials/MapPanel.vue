@@ -3,8 +3,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLibraryStore } from '../../store/library'
 import { useAppStore } from '../../store/app'
-import { inkConfirm } from '../../ui/inkPrompt'
-import InkSelect from '../../ui/InkSelect.vue'
+import { toolConfirm } from '../../ui/toolPrompt'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import GraphCanvas, { type CanvasNode, type CanvasEdge } from './GraphCanvas.vue'
 import { Eraser, ImagePlus, Map as MapIcon, Pencil, Plus, Trash2, WandSparkles, X } from 'lucide-vue-next'
 import type { BookMap, MapNode, MapNodeStatus } from '../../types'
@@ -228,7 +228,7 @@ async function pickBase() {
 async function clearBase() {
   const m = active.value
   if (!m) return
-  const ok = await inkConfirm('清除当前地图的底图？', { confirmText: '清除', danger: true })
+  const ok = await toolConfirm('清除当前地图的底图？', { confirmText: '清除', danger: true })
   if (!ok) return
   m.base = { kind: 'none', path: '', opacity: baseOpacity.value }
   const ctx = canvasRef.value?.getContext('2d')
@@ -264,7 +264,7 @@ async function addMap() {
 async function removeMap(id: string) {
   const m = maps.value.find((x) => x.id === id)
   if (!m) return
-  const ok = await inkConfirm(`删除地图「${m.name}」？底图与节点一并删除。`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除地图「${m.name}」？底图与节点一并删除。`, { confirmText: '删除', danger: true })
   if (!ok) return
   maps.value = maps.value.filter((x) => x.id !== id)
   if (activeId.value === id) activeId.value = maps.value[0]?.id || ''
@@ -339,7 +339,7 @@ async function removeNode(id: string) {
   if (!m) return
   const n = m.nodes.find((x) => x.id === id)
   if (!n) return
-  const ok = await inkConfirm(`删除地点「${n.label}」？（关联连线一并删除）`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`删除地点「${n.label}」？（关联连线一并删除）`, { confirmText: '删除', danger: true })
   if (!ok) return
   m.nodes = m.nodes.filter((x) => x.id !== id)
   m.edges = m.edges.filter((e) => e.source !== id && e.target !== id)
@@ -350,7 +350,7 @@ async function removeNode(id: string) {
 /** 交给智能体：结合设定与正文梳理地图（走写入提案） */
 async function askAgent() {
   if (!lib.current) return
-  app.goAskAgent() // 切到妙笔页，用户能直接看到流式生成
+  app.goAskAgent() // 切到创作助手页，用户能直接看到流式生成
   const { useConversationStore } = await import('../../store/conversation')
   const conv = useConversationStore()
   await conv.askWith(
@@ -364,8 +364,8 @@ function onFileChanged(e: Event) {
   const p = (e as CustomEvent<{ path?: string }>).detail?.path
   if (p === '地图.json') void load()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 watch(book, () => void load())
 onMounted(() => void load())
@@ -502,11 +502,11 @@ onMounted(() => void load())
       </div>
       <div>
         <div class="text-[11px] text-[var(--text-faint)] mb-1.5">名称</div>
-        <input v-model="selectedNode.label" class="ink-input" placeholder="如：青云宗" @change="persist" />
+        <input v-model="selectedNode.label" class="tool-input" placeholder="如：青云宗" @change="persist" />
       </div>
       <div>
         <div class="text-[11px] text-[var(--text-faint)] mb-1.5">场景状态</div>
-        <InkSelect v-model="selectedNode.status" class="w-full" :options="STATUSES.map((s) => ({ label: s, value: s }))" @change="persist" />
+        <ToolSelect v-model="selectedNode.status" class="w-full" :options="STATUSES.map((s) => ({ label: s, value: s }))" @change="persist" />
       </div>
       <div>
         <div class="text-[11px] text-[var(--text-faint)] mb-1.5">相关路径（{{ selectedNodeEdges.length }}）</div>

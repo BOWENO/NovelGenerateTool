@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import InkModal from '../ui/InkModal.vue'
-import InkButton from '../ui/InkButton.vue'
-import InkSelect from '../ui/InkSelect.vue'
+import ToolModal from '../ui/ToolModal.vue'
+import ToolButton from '../ui/ToolButton.vue'
+import ToolSelect from '../ui/ToolSelect.vue'
 import { aiRun } from '../ai'
 
 const props = defineProps<{ open: boolean; action: string; text: string }>()
@@ -19,7 +19,7 @@ const TITLES: Record<string, string> = {
   polish: '润色',
   expand: '扩写',
   fix: '纠错',
-  deai: '去 AI 味',
+  deai: '风格检查',
   custom: '自定义指令'
 }
 
@@ -74,11 +74,11 @@ function apply() {
 </script>
 
 <template>
-  <InkModal :open="props.open" :title="TITLES[props.action] || 'AI 处理'" wide @close="emit('close')">
+  <ToolModal :open="props.open" :title="TITLES[props.action] || 'AI 处理'" wide @close="emit('close')">
     <div class="space-y-4">
       <div v-if="props.action === 'deai'" class="flex items-center gap-2 text-sm">
-        <span class="text-[var(--text-dim)]">去味强度</span>
-        <InkSelect
+        <span class="text-[var(--text-dim)]">修订范围</span>
+        <ToolSelect
           v-model="level"
           class="w-auto"
           :disabled="running"
@@ -89,32 +89,32 @@ function apply() {
             { label: 'L4 极致', value: 'L4' }
           ]"
         />
-        <InkButton v-if="!running && (result || error)" variant="ghost" @click="run">重新生成</InkButton>
+        <ToolButton v-if="!running && (result || error)" variant="ghost" @click="run">重新生成</ToolButton>
       </div>
 
       <div v-if="props.action === 'custom'" class="flex gap-2">
-        <input v-model="instruction" class="ink-input" placeholder="输入自定义指令，例如：把对话改得更口语化" @keyup.enter="run" />
-        <InkButton :disabled="running" @click="run">执行</InkButton>
+        <input v-model="instruction" class="tool-input" placeholder="输入自定义指令，例如：把对话改得更口语化" @keyup.enter="run" />
+        <ToolButton :disabled="running" @click="run">执行</ToolButton>
       </div>
 
-      <div v-if="running && !result" class="ink-dots py-6 text-center"><span /><span /><span /></div>
+      <div v-if="running && !result" class="tool-dots py-6 text-center"><span /><span /><span /></div>
       <div v-if="error" class="text-sm text-[#e08a7a]">{{ error }}</div>
 
       <div v-if="result || !running" class="grid gap-3" :class="result ? 'grid-cols-2' : 'grid-cols-1'">
         <div v-if="result">
           <div class="text-xs text-[var(--text-faint)] mb-1">AI 结果（可修改）</div>
-          <textarea v-model="result" class="ink-textarea h-56 text-[15px] leading-8" />
+          <textarea v-model="result" class="tool-textarea h-56 text-[15px] leading-8" />
         </div>
         <div v-if="result">
           <div class="text-xs text-[var(--text-faint)] mb-1">原文</div>
-          <div class="ink-textarea h-56 overflow-y-auto text-[15px] leading-8 opacity-70" style="resize: vertical">{{ props.text }}</div>
+          <div class="tool-textarea h-56 overflow-y-auto text-[15px] leading-8 opacity-70" style="resize: vertical">{{ props.text }}</div>
         </div>
       </div>
 
       <div v-if="result" class="flex justify-end gap-2">
-        <InkButton variant="ghost" @click="emit('close')">放弃</InkButton>
-        <InkButton @click="apply">替换选区</InkButton>
+        <ToolButton variant="ghost" @click="emit('close')">放弃</ToolButton>
+        <ToolButton @click="apply">替换选区</ToolButton>
       </div>
     </div>
-  </InkModal>
+  </ToolModal>
 </template>

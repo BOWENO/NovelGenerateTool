@@ -7,8 +7,8 @@ import { useLibraryStore } from '../../store/library'
 import { useConversationStore } from '../../store/conversation'
 import { aiRun } from '../../ai'
 import { renderMarkdown } from '../../ui/markdown'
-import InkEditor from '../../editor/InkEditor.vue'
-import { inkPrompt, inkConfirm } from '../../ui/inkPrompt'
+import ToolEditor from '../../editor/ToolEditor.vue'
+import { toolPrompt, toolConfirm } from '../../ui/toolPrompt'
 import { SETTING_TEMPLATES } from '../../lib/settingTemplates'
 import { Plus, Search, Sparkles, Trash2, ShieldCheck, FilePlus2, FolderInput } from 'lucide-vue-next'
 
@@ -103,7 +103,7 @@ const tplMenu = ref(false)
 
 /** 问分组：可输入任意新组名（即输即建），留空=未分组；取消返回 null */
 async function promptGroup(defaultGroup: string): Promise<string | null> {
-  const g = await inkPrompt('分组（可输入任意新组名，留空=不分组）', defaultGroup)
+  const g = await toolPrompt('分组（可输入任意新组名，留空=不分组）', defaultGroup)
   if (g === null) return null
   return g.trim().replace(/[\\/:*?"<>|]/g, '')
 }
@@ -114,7 +114,7 @@ async function newFile() {
     tplMenu.value = !tplMenu.value
     return
   }
-  const name = await inkPrompt('新建文件名（不含 .md）', '')
+  const name = await toolPrompt('新建文件名（不含 .md）', '')
   if (!name) return
   const rel = `${props.dir}/${name}.md`
   await window.api.fileWrite(lib.current.title, rel, `# ${name}\n\n`)
@@ -127,13 +127,13 @@ async function newFile() {
 async function newFromTemplate(t: { label: string; group: string; body: string } | null) {
   tplMenu.value = false
   if (!lib.current) return
-  const name = (await inkPrompt('文件名（不含 .md）', t ? t.label : ''))?.trim()
+  const name = (await toolPrompt('文件名（不含 .md）', t ? t.label : ''))?.trim()
   if (!name) return
   const group = await promptGroup(t ? t.group : '')
   if (group === null) return
   const rel = group ? `${props.dir}/${group}/${name}.md` : `${props.dir}/${name}.md`
   if (files.value.some((f) => f.path === rel)) {
-    const ok = await inkConfirm(`「${name}」已存在，覆盖它？`, { confirmText: '覆盖', danger: true })
+    const ok = await toolConfirm(`「${name}」已存在，覆盖它？`, { confirmText: '覆盖', danger: true })
     if (!ok) return
   }
   await window.api.fileWrite(lib.current.title, rel, t ? t.body : `# ${name}\n\n`)
@@ -153,7 +153,7 @@ async function moveFile() {
   const rel = group ? `${props.dir}/${group}/${name}` : `${props.dir}/${name}`
   if (rel === current.value) return
   if (files.value.some((f) => f.path === rel)) {
-    const ok = await inkConfirm(`目标位置已有「${name}」，覆盖它？`, { confirmText: '覆盖', danger: true })
+    const ok = await toolConfirm(`目标位置已有「${name}」，覆盖它？`, { confirmText: '覆盖', danger: true })
     if (!ok) return
   }
   // 直接取编辑器当前内容，取消挂起快照（避免它稍后把内容写回旧路径）
@@ -174,7 +174,7 @@ async function moveFile() {
 async function deleteFile() {
   if (!lib.current || !current.value) return
   flushPendingSave()
-  const ok = await inkConfirm(`确定删除「${current.value}」？`, { confirmText: '删除', danger: true })
+  const ok = await toolConfirm(`确定删除「${current.value}」？`, { confirmText: '删除', danger: true })
   if (!ok) return
   await window.api.fileDelete(lib.current.title, current.value)
   await lib.refreshTree()
@@ -372,8 +372,8 @@ function onFileChanged(e: Event) {
   const p = (e as CustomEvent<{ path?: string }>).detail?.path
   if (p && p === current.value) void loadMd()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 </script>
 
 <template>
@@ -452,7 +452,7 @@ onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChang
     <!-- 中：编辑器 -->
     <section class="flex-1 min-w-0 flex flex-col">
       <div class="h-11 shrink-0 flex items-center gap-2 px-5 border-b border-[var(--border)]">
-        <span class="font-serif-ink text-[13.5px] truncate">{{ current || '未选择文件' }}</span>
+        <span class="font-serif-tool text-[13.5px] truncate">{{ current || '未选择文件' }}</span>
         <span class="text-[11px] text-[var(--text-faint)]">{{ content.length }} 字</span>
         <div class="flex-1" />
         <!-- 词典关联速览（设定板块）：当前文件里提到的专名 → 词典现状 -->
@@ -512,11 +512,11 @@ onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChang
             </div>
             <div v-if="checkup.error" class="text-[12.5px] text-[#e08a7a] mb-2">{{ checkup.error }}</div>
             <div v-if="checkup.report" class="markdown-body text-[13px] leading-7 select-text" v-html="checkupHtml" />
-            <div v-else-if="checkup.running" class="ink-dots py-3"><span /><span /><span /></div>
+            <div v-else-if="checkup.running" class="tool-dots py-3"><span /><span /><span /></div>
           </div>
         </div>
-        <div v-else class="prose-ink">
-          <InkEditor v-if="current" :key="current" v-model="content" :ghost="''" :placeholder="`编辑${props.dir}…`" />
+        <div v-else class="prose-tool">
+          <ToolEditor v-if="current" :key="current" v-model="content" :ghost="''" :placeholder="`编辑${props.dir}…`" />
           <div v-else class="text-[13px] text-[var(--text-faint)] text-center pt-20">选择或新建一个文件</div>
         </div>
       </div>

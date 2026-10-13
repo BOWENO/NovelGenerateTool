@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 统一的空状态提示：图标 + 主文案 + 副文案 + 动作按钮，写作台右栏各标签页共用
-import InkButton from './InkButton.vue'
+import ToolButton from './ToolButton.vue'
 
 defineProps<{
   icon?: unknown
@@ -17,7 +17,7 @@ const emit = defineEmits<{ (e: 'action'): void }>()
     <p class="text-[12.5px] text-[var(--text-dim)]">{{ title }}</p>
     <p v-if="desc" class="text-[11.5px] text-[var(--text-faint)] leading-5">{{ desc }}</p>
     <div v-if="action" class="mt-1.5">
-      <InkButton @click="emit('action')">{{ action }}</InkButton>
+      <ToolButton @click="emit('action')">{{ action }}</ToolButton>
     </div>
   </div>
 </template>

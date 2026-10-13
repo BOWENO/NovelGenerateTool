@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { aiRun } from '../../ai'
-import InkButton from '../../ui/InkButton.vue'
-import InkSelect from '../../ui/InkSelect.vue'
+import ToolButton from '../../ui/ToolButton.vue'
+import ToolSelect from '../../ui/ToolSelect.vue'
 import { Copy, Check, LoaderCircle, WandSparkles } from 'lucide-vue-next'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -111,8 +111,8 @@ async function copyName(name: string, i: number) {
     <!-- 中：条件 -->
     <div class="w-[280px] shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
       <div class="flex gap-2">
-        <InkSelect v-model="style" class="flex-1" :options="STYLES.map((s) => ({ label: s, value: s }))" />
-        <InkSelect v-model="era" class="flex-1" :options="ERAS.map((s) => ({ label: s, value: s }))" />
+        <ToolSelect v-model="style" class="flex-1" :options="STYLES.map((s) => ({ label: s, value: s }))" />
+        <ToolSelect v-model="era" class="flex-1" :options="ERAS.map((s) => ({ label: s, value: s }))" />
       </div>
 
       <div>
@@ -149,19 +149,19 @@ async function copyName(name: string, i: number) {
 
       <div>
         <div class="text-[11.5px] text-[var(--text-faint)] mb-1.5">包含字/后缀（选填）</div>
-        <input v-model="suffix" class="ink-input" placeholder="如：城、谷、峰、神域" />
+        <input v-model="suffix" class="tool-input" placeholder="如：城、谷、峰、神域" />
       </div>
 
       <div>
         <div class="text-[11.5px] text-[var(--text-faint)] mb-1.5">具体要求</div>
-        <textarea v-model="request" rows="3" class="ink-textarea text-[12.5px] resize-none" :placeholder="placeholder" />
+        <textarea v-model="request" rows="3" class="tool-textarea text-[12.5px] resize-none" :placeholder="placeholder" />
       </div>
 
-      <InkButton :disabled="busy" @click="generate">
+      <ToolButton :disabled="busy" @click="generate">
         <LoaderCircle v-if="busy" :size="13" class="animate-spin" />
         <WandSparkles v-else :size="13" />
         {{ busy ? '生成中…' : '开始生成' }}
-      </InkButton>
+      </ToolButton>
       <div v-if="error" class="text-[12px] text-[#e08a7a]">{{ error }}</div>
     </div>
 

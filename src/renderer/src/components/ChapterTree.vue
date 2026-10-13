@@ -27,7 +27,7 @@ function hit(name: string): boolean {
       </button>
     </div>
     <div class="px-3 pb-2">
-      <input v-model="keyword" class="ink-input !py-1 !px-2.5 text-xs" placeholder="搜索全书文件…" />
+      <input v-model="keyword" class="tool-input !py-1 !px-2.5 text-xs" placeholder="搜索全书文件…" />
     </div>
     <template v-for="n in lib.tree" :key="n.path">
       <!-- 目录 -->

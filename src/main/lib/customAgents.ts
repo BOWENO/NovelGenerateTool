@@ -8,6 +8,7 @@ import { AGENTS, AgentDef, STRUCT_BOARDS } from './agents'
 import { getPrompt, renderPrompt } from './prompts'
 import { LibKind } from './materials'
 import { estimateTokens, recordCall } from './ailog'
+import { assertContextFits } from './context'
 
 export interface CustomAgent extends Omit<AgentDef, 'promptId'> {
   id: string
@@ -106,7 +107,7 @@ export function setCustomAgentEnabled(id: string, enabled: boolean): { ok: boole
   if (!a) return { ok: false, message: '未找到该智能体' }
   a.enabled = !!enabled
   persist(list)
-  return { ok: true, message: enabled ? '已在妙笔启用' : '已在妙笔停用' }
+  return { ok: true, message: enabled ? '已在创作助手启用' : '已在创作助手停用' }
 }
 
 // ============ 统一解析：内置 + 自定义 ============
@@ -190,6 +191,7 @@ export async function llmComplete(
   const baseUrl = provider.baseUrl.replace(/\/+$/, '')
   const startedAt = Date.now()
   try {
+    assertContextFits(system.length + user.length, getConfig().modelContexts?.[`${provider.id}/${cfg.model}`])
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {}) },
@@ -203,7 +205,8 @@ export async function llmComplete(
       const text = await res.text().catch(() => '')
       throw new Error(`接口返回 ${res.status}：${text.slice(0, 300)}`)
     }
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    const json = (await res.json()) as { choices?: { finish_reason?: string; message?: { content?: string } }[] }
+    if (json.choices?.[0]?.finish_reason === 'length') throw new Error('模型输出被截断，本次结果未保存。')
     const content = json.choices?.[0]?.message?.content || ''
     if (!content.trim()) throw new Error('模型返回了空内容')
     recordCall({

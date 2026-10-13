@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { promptState, settle, confirmState, settleConfirm } from './inkPrompt'
-import InkButton from './InkButton.vue'
+import { promptState, settle, confirmState, settleConfirm } from './toolPrompt'
+import ToolButton from './ToolButton.vue'
 
 /** 取消按钮文案为空串时，视为纯提示（只渲染确定键） */
 const confirmOnly = computed(() => confirmState.opts.cancelText === '')
@@ -27,8 +27,8 @@ const confirmVariant = computed(() => (confirmState.opts.danger ? 'danger' : 'pr
             {{ confirmState.opts.detail }}
           </div>
           <div class="flex justify-end gap-2 mt-5">
-            <InkButton v-if="!confirmOnly" variant="ghost" @click="settleConfirm(false)">{{ cancelLabel }}</InkButton>
-            <InkButton :variant="confirmVariant" @click="settleConfirm(true)">{{ confirmLabel }}</InkButton>
+            <ToolButton v-if="!confirmOnly" variant="ghost" @click="settleConfirm(false)">{{ cancelLabel }}</ToolButton>
+            <ToolButton :variant="confirmVariant" @click="settleConfirm(true)">{{ confirmLabel }}</ToolButton>
           </div>
         </div>
       </div>
@@ -42,14 +42,14 @@ const confirmVariant = computed(() => (confirmState.opts.danger ? 'danger' : 'pr
           <div class="text-sm mb-3">{{ promptState.title }}</div>
           <input
             v-model="promptState.value"
-            class="ink-input mb-4"
+            class="tool-input mb-4"
             autofocus
             @keyup.enter="settle(promptState.value)"
             @keyup.esc="settle(null)"
           />
           <div class="flex justify-end gap-2">
-            <InkButton variant="ghost" @click="settle(null)">取消</InkButton>
-            <InkButton @click="settle(promptState.value)">确定</InkButton>
+            <ToolButton variant="ghost" @click="settle(null)">取消</ToolButton>
+            <ToolButton @click="settle(promptState.value)">确定</ToolButton>
           </div>
         </div>
       </div>

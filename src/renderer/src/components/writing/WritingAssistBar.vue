@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { inkPrompt } from '../../ui/inkPrompt'
+import { toolPrompt } from '../../ui/toolPrompt'
 
 const props = defineProps<{
   /** 今日已写的字数（手写 + AI） */
@@ -11,7 +11,7 @@ const props = defineProps<{
   filePath: string
 }>()
 
-const GOAL_KEY = 'inkdesk.dailyGoal'
+const GOAL_KEY = 'novelgeneratetool.dailyGoal'
 const goal = ref(Number(localStorage.getItem(GOAL_KEY)) || 3000)
 
 const sessionStart = ref(Date.now())
@@ -68,7 +68,7 @@ const pct = computed(() => (goal.value > 0 ? Math.min(100, Math.round((props.tod
 const reached = computed(() => props.todayWritten >= goal.value)
 
 async function editGoal() {
-  const v = await inkPrompt('每日字数目标（只存在本机，不影响作品）', String(goal.value))
+  const v = await toolPrompt('每日字数目标（只存在本机，不影响作品）', String(goal.value))
   if (v === null) return
   const n = Math.max(100, Math.min(100000, Number(v) || goal.value))
   goal.value = n

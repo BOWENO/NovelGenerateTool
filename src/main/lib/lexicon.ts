@@ -3,8 +3,8 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { shell } from 'electron'
 
-// ============ 词库外置（去AI味红牌/信号词表）：userData/词库.json 可编辑，改完面板里点「词库」重载 ============
-// 约定：只支持「追加」自定义词与红牌（内置词表是实测校准过的基线，不做删除）；pattern 为正则字符串
+// ============ 词库外置（风格检查红牌/信号词表）：userData/词库.json 可编辑，改完面板里点「词库」重载 ============
+// 约定：只支持「追加」自定义词与红牌（内置规则与自定义规则均只用于定位候选问题）；pattern 为正则字符串
 
 export interface LexiconRedCard {
   key: string
@@ -20,26 +20,12 @@ export interface LexiconData {
   _说明?: string
   /** 追加红牌句式（出现即警告） */
   redCards?: LexiconRedCard[]
-  /** 追加对话层信号词：疑虑（小说正文只统计角色台词） */
-  dialogDoubt?: string[]
-  dialogDigress?: string[]
-  dialogVoice?: string[]
-  /** 追加文章层信号词 */
-  articleDoubt?: string[]
-  articleDigress?: string[]
-  articleVoice?: string[]
+
 }
 
 const DEFAULT: LexiconData = {
-  _说明:
-    '去AI味词库（追加制）：在数组里加条目即可生效。redCards.pattern 填正则字符串（不要斜杠），genres 可选 "fiction"/"article"；六个信号词数组直接加词字符串。编辑保存后，回到写作台「去AI味」面板点「词库」按钮重载。',
-  redCards: [],
-  dialogDoubt: [],
-  dialogDigress: [],
-  dialogVoice: [],
-  articleDoubt: [],
-  articleDigress: [],
-  articleVoice: []
+  _说明: '追加需要核查的句式：redCards.pattern 填正则字符串，genres 可选 fiction 或 article。规则只定位候选问题，需回看原文。保存后在风格检查面板点词库重载。',
+  redCards: []
 }
 
 function lexiconFile(): string {

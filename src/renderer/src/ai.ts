@@ -22,7 +22,7 @@ function ensureSubscribe() {
     } else if (evt.type === 'aborted') {
       listeners.delete(evt.runId)
       l.onAborted?.()
-      l.resolve?.('')
+      l.reject?.(new Error('已中止，本次结果未保存。'))
     }
   })
 }
@@ -40,6 +40,9 @@ export function aiRun(
     l.resolve = resolve
     l.reject = reject
   })
-  void window.api.aiRun({ runId, task, promptId, vars, deaiLevel: opts?.deaiLevel })
+  void window.api.aiRun({ runId, task, promptId, vars, deaiLevel: opts?.deaiLevel }).catch((error) => {
+    listeners.delete(runId)
+    l.reject?.(error)
+  })
   return { promise, abort: () => void window.api.aiAbort(runId) }
 }

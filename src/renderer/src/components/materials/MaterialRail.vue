@@ -28,15 +28,15 @@ const section = computed(() => app.materialsTab || '大纲')
 
 <template>
   <aside class="w-[68px] shrink-0 border-l border-[var(--border)] bg-[var(--bg-soft)]/60 flex flex-col items-center py-2 gap-0.5">
-    <!-- 妙笔：跳到写作台的智能体 -->
+    <!-- 创作助手：跳到写作台的智能体 -->
     <button
       class="w-full flex flex-col items-center gap-1 py-2.5 cursor-pointer transition-colors rounded-lg"
       :style="{ color: 'var(--accent)' }"
-      title="妙笔 · AI 助手"
+      title="创作助手 · AI 助手"
       @click="app.goAskAgent()"
     >
       <Sparkles :size="17" />
-      <span class="text-[10.5px]">妙笔</span>
+      <span class="text-[10.5px]">创作助手</span>
     </button>
 
     <div class="w-8 h-px bg-[var(--border)] my-1 shrink-0" />

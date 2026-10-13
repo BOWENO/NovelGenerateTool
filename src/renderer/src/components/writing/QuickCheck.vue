@@ -2,7 +2,7 @@
 // 随写随查速检：当前章正文对照词典 / 出场追踪 / 境界体系 / 伏笔板 / 本章细纲，本地匹配零 AI
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { BookOpenCheck, RefreshCw, ScanSearch } from 'lucide-vue-next'
-import { analyzeHumanSignal } from '../../lib/human-signal'
+import { analyzeTextPatterns } from '../../lib/text-check'
 import FullCheck from './FullCheck.vue'
 
 const props = defineProps<{ book: string; file: string; chapterText: string }>()
@@ -59,8 +59,8 @@ watch(() => props.book, () => void load())
 function onFileChanged() {
   void load()
 }
-onMounted(() => window.addEventListener('inkdesk:file-changed', onFileChanged))
-onUnmounted(() => window.removeEventListener('inkdesk:file-changed', onFileChanged))
+onMounted(() => window.addEventListener('novelgeneratetool:file-changed', onFileChanged))
+onUnmounted(() => window.removeEventListener('novelgeneratetool:file-changed', onFileChanged))
 
 const isChapter = computed(() => props.file.startsWith('正文/'))
 const text = computed(() => props.chapterText || '')
@@ -77,9 +77,15 @@ const hitChars = computed(() => {
     .map((t) => ({ ...t, realm: power.value.chars.find((c) => c.name === t.name)?.realm || '' }))
 })
 /** 警告：已死亡/离场的角色在本章出现（若为回忆/闪回可忽略） */
-const ghostWarnings = computed(() => hitChars.value.filter((c) => c.status === '死亡' || c.status === '离场'))
+const ghostWarnings = computed(() => hitChars.value.filter((c) => {
+  const at = Number(c.lastChapter?.match(/(\d+)/)?.[1] || 0)
+  return at > 0 && chapterNo.value > at && (c.status === '死亡' || c.status === '离场')
+}))
 /** 提醒：受伤/闭关的角色现身，行文里需要交代状态 */
-const statusWarns = computed(() => hitChars.value.filter((c) => c.status === '受伤' || c.status === '闭关'))
+const statusWarns = computed(() => hitChars.value.filter((c) => {
+  const at = Number(c.lastChapter?.match(/(\d+)/)?.[1] || 0)
+  return at > 0 && chapterNo.value >= at && (c.status === '受伤' || c.status === '闭关')
+}))
 /** 命中的非人物专名 */
 const hitTerms = computed(() => {
   if (!isChapter.value || !text.value) return []
@@ -133,10 +139,10 @@ const realmWarns = computed(() => {
   }
   return out
 })
-/** AI 毒句式红牌快扫（与去 AI 味面板同款本地规则） */
+/** 常见句式快扫（与风格检查面板同款本地规则） */
 const redCards = computed(() => {
   if (!isChapter.value || !text.value) return []
-  return analyzeHumanSignal(text.value, 'fiction').redCards
+  return analyzeTextPatterns(text.value, 'fiction').redCards
 })
 
 function reload() {
@@ -170,7 +176,7 @@ defineExpose({ reload })
     <FullCheck :book="props.book" :open="fullOpen" @close="fullOpen = false" />
 
     <p v-if="!isChapter" class="text-xs text-[var(--text-faint)] leading-5">
-      打开一个章节文件后自动对照：登记角色（状态/所在地/境界，死亡离场现身标红）、细纲出场规划、专名词条、悬置伏笔与久悬提醒、境界越级参考、AI 毒句式红牌。全程本地匹配，零 AI 成本。
+      打开一个章节文件后自动对照：登记角色（状态/所在地/境界，死亡离场现身标红）、细纲出场规划、专名词条、悬置伏笔与久悬提醒、境界越级参考、常见句式。全程本地匹配，零 AI 成本。
     </p>
 
     <template v-else>
@@ -275,10 +281,10 @@ defineExpose({ reload })
         </div>
       </div>
 
-      <!-- AI 毒句式红牌快扫 -->
+      <!-- 常见句式快扫 -->
       <div>
-        <div class="text-[11px] text-[var(--text-faint)] tracking-wider mb-1.5">毒句式红牌（{{ redCards.length }}）</div>
-        <p v-if="!redCards.length" class="text-[11px] text-[var(--text-faint)]">未扫到红牌句式。完整六维打分去「去 AI 味」面板看。</p>
+        <div class="text-[11px] text-[var(--text-faint)] tracking-wider mb-1.5">句式提示（{{ redCards.length }}）</div>
+        <p v-if="!redCards.length" class="text-[11px] text-[var(--text-faint)]">本次规则未发现候选句式。可在「风格检查」面板继续连读诊断。</p>
         <div v-else class="space-y-1">
           <div
             v-for="(r, i) in redCards"

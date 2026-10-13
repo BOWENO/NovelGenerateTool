@@ -34,7 +34,7 @@ const rootEl = ref<HTMLElement>()
  * 原因：顶部栏整体是窗口拖动区（app-drag），面板若留在栏内，Windows 下点击会被拖动区吞掉，
  * 且会被顶栏的半透明毛玻璃层影响观感。挂到 body 后既脱离拖动区也脱离其层叠上下文。
  */
-const PANEL_ID = 'ink-search-panel'
+const PANEL_ID = 'tool-search-panel'
 const panelStyle = ref<Record<string, string>>({})
 
 function updatePanelPos() {
@@ -273,7 +273,7 @@ async function run() {
     await loadIndex()
   } catch (e) {
     // 索引失败不应让整次搜索返回空：至少保留「功能」「作品」命中
-    console.warn('[ink-search] 建立索引失败', (e as Error)?.message || e)
+    console.warn('[tool-search] 建立索引失败', (e as Error)?.message || e)
   }
 
   // 结构化板块：按板块名 / 条目名 / 摘要命中
@@ -391,13 +391,13 @@ function onFileChanged() {
 
 onMounted(() => {
   window.addEventListener('keydown', onHotkey)
-  window.addEventListener('inkdesk:file-changed', onFileChanged)
+  window.addEventListener('novelgeneratetool:file-changed', onFileChanged)
   window.addEventListener('resize', updatePanelPos)
   document.addEventListener('mousedown', onDocMousedown)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onHotkey)
-  window.removeEventListener('inkdesk:file-changed', onFileChanged)
+  window.removeEventListener('novelgeneratetool:file-changed', onFileChanged)
   window.removeEventListener('resize', updatePanelPos)
   document.removeEventListener('mousedown', onDocMousedown)
 })

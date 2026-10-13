@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 简约风光标粒子：打字时在文本插入符处生成细小光点，淡出上浮。
- * 编辑器通过 window 事件 'inkdesk:caret' (detail: {x, y}) 上报插入符坐标。
+ * 编辑器通过 window 事件 'novelgeneratetool:caret' (detail: {x, y}) 上报插入符坐标。
  */
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useAppStore } from '../store/app'
@@ -57,13 +57,13 @@ onMounted(() => {
   ctx = canvas.value?.getContext('2d') || null
   resize()
   window.addEventListener('resize', resize)
-  window.addEventListener('inkdesk:caret', onCaret)
+  window.addEventListener('novelgeneratetool:caret', onCaret)
   loop()
 })
 onUnmounted(() => {
   cancelAnimationFrame(raf)
   window.removeEventListener('resize', resize)
-  window.removeEventListener('inkdesk:caret', onCaret)
+  window.removeEventListener('novelgeneratetool:caret', onCaret)
 })
 import { watch } from 'vue'
 watch(

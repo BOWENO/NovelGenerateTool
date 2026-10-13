@@ -20,6 +20,7 @@ declare global {
       bookMetaWrite: (book: string, patch: Record<string, unknown>) => Promise<Record<string, unknown>>
       fileRead: (book: string, rel: string) => Promise<string>
       fileWrite: (book: string, rel: string, content: string) => Promise<void>
+      chapterAdopt: (book: string, rel: string, base: string, content: string) => Promise<{ sha256: string }>
       fileDelete: (book: string, rel: string) => Promise<void>
       historyList: (book: string, rel: string) => Promise<{ file: string; at: string }[]>
       historyRead: (book: string, rel: string, file: string) => Promise<string>

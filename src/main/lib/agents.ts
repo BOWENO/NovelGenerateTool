@@ -7,7 +7,7 @@ export interface AgentDef {
   welcome: string[]
   /** 默认可读目录；空数组表示可读全书 */
   readScope: string[]
-  /** 资料区工具型智能体：通常由对应资料面板一键调用，在妙笔选择列表里默认折叠 */
+  /** 资料区工具型智能体：通常由对应资料面板一键调用，在创作助手选择列表里默认折叠 */
   panel?: boolean
 }
 

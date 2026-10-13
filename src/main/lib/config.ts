@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
+import { atomicWrite } from './atomic'
 
 export interface Provider {
   id: string
@@ -41,13 +42,13 @@ export interface AppConfig {
   providerSearch: Record<string, boolean>
   /** 保存与备份 */
   backup: {
-    /** 备份目录；留空用默认（书架旁「DAWO 备份」） */
+    /** 备份目录；留空用默认（书架旁「NovelGenerateTool 备份」） */
     dir: string
     /** 退出应用时自动备份当前作品 */
     autoOnExit: boolean
   }
   appearance: {
-    theme: 'dark' | 'ink-blue' | 'ink-green' | 'ink-purple' | 'light' | 'sepia' | 'moon' | 'celadon'
+    theme: 'dark' | 'blue' | 'green' | 'purple' | 'light' | 'sepia' | 'moon' | 'celadon'
     accent: string
     backgroundImage: string
     bgOpacity: number
@@ -73,7 +74,7 @@ let cfgPath: string
 
 export function defaultConfig(): AppConfig {
   return {
-    libraryRoot: join(app.getPath('documents'), 'DAWO 书架'),
+    libraryRoot: process.env.NOVELGENERATETOOL_DATA_DIR ? join(app.getPath('userData'), '书架') : join(app.getPath('documents'), 'NovelGenerateTool 书架'),
     providers: [],
     tasks: {
       workflow: { providerId: '', model: '', temperature: 0.8 },
@@ -97,25 +98,25 @@ export function defaultConfig(): AppConfig {
     providerSearch: {},
     backup: { dir: '', autoOnExit: false },
     appearance: {
-      theme: 'dark',
-      accent: '#c9a15f',
+      theme: 'blue',
+      accent: '#74adff',
       backgroundImage: '',
       bgOpacity: 0.08,
       radius: 'md',
       fontScale: 1,
-      glow: true,
-      orbs: true,
+      glow: false,
+      orbs: false,
       particles: false,
       press: true,
-      pageFade: true,
-      cardRise: true
+      pageFade: false,
+      cardRise: false
     },
     activeBook: null
   }
 }
 
 export function initConfig(): void {
-  cfgPath = join(app.getPath('userData'), 'inkdesk-config.json')
+  cfgPath = join(app.getPath('userData'), 'novelgeneratetool-config.json')
   try {
     if (existsSync(cfgPath)) {
       cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'))
@@ -150,7 +151,7 @@ export function getConfig(): AppConfig {
 
 export function saveConfig(): void {
   mkdirSync(dirname(cfgPath), { recursive: true })
-  writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf-8')
+  atomicWrite(cfgPath, JSON.stringify(cfg, null, 2))
 }
 
 export function updateConfig(patch: Record<string, unknown>): AppConfig {

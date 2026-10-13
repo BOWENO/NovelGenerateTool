@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import type { LibProposal, LibProposalItem } from '../../types'
 import { useConversationStore } from '../../store/conversation'
-import InkButton from '../../ui/InkButton.vue'
+import ToolButton from '../../ui/ToolButton.vue'
 import { Library, ChevronDown, ChevronRight, CircleCheck, PackageCheck, CircleAlert } from 'lucide-vue-next'
 
 const props = defineProps<{ proposal: LibProposal }>()
@@ -146,10 +146,10 @@ async function doReject() {
         {{ picked.length === pending.length ? '全不选' : '全选' }}
       </button>
       <div class="flex-1" />
-      <InkButton variant="ghost" :disabled="busy" @click="doReject">全部丢弃</InkButton>
-      <InkButton :disabled="busy || !pickedPending.length" @click="doApply">
+      <ToolButton variant="ghost" :disabled="busy" @click="doReject">全部丢弃</ToolButton>
+      <ToolButton :disabled="busy || !pickedPending.length" @click="doApply">
         入库 {{ pickedPending.length }} 条
-      </InkButton>
+      </ToolButton>
     </div>
     <div v-else-if="settled && proposal.message" class="px-3.5 py-2 text-[11px] text-[var(--text-faint)]">
       {{ proposal.message }}

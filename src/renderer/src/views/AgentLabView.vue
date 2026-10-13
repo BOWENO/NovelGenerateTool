@@ -1,13 +1,13 @@
 <script setup lang="ts">
-// 智能体库：AI 起草自定义智能体 + 权限配置 + 妙笔启用管理
+// 智能体库：AI 起草自定义智能体 + 权限配置 + 创作助手启用管理
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useAppStore } from '../store/app'
 import { useLibraryStore } from '../store/library'
 import { useConversationStore, AGENTS } from '../store/conversation'
-import InkButton from '../ui/InkButton.vue'
-import InkModal from '../ui/InkModal.vue'
-import InkToggle from '../ui/InkToggle.vue'
-import { inkConfirm } from '../ui/inkPrompt'
+import ToolButton from '../ui/ToolButton.vue'
+import ToolModal from '../ui/ToolModal.vue'
+import ToolToggle from '../ui/ToolToggle.vue'
+import { toolConfirm } from '../ui/toolPrompt'
 import type { CustomAgent, LibKind } from '../types'
 import { Bot, Plus, Pencil, Trash2, Globe, Sparkles, LoaderCircle, LibraryBig, Users } from 'lucide-vue-next'
 
@@ -211,8 +211,8 @@ async function toggleBuiltinOrch(id: string) {
 }
 
 async function removeCustom(a: CustomAgent) {
-  const ok = await inkConfirm(`确定删除自定义智能体「${a.name}」？`, {
-    detail: '删除后不可恢复；它在妙笔里的历史会话仍保留，但无法继续使用该智能体。',
+  const ok = await toolConfirm(`确定删除自定义智能体「${a.name}」？`, {
+    detail: '删除后不可恢复；它在创作助手里的历史会话仍保留，但无法继续使用该智能体。',
     confirmText: '删除',
     danger: true
   })
@@ -247,12 +247,12 @@ function scopeText(scope: string[]): string {
       <!-- 顶部 -->
       <div class="flex items-end justify-between mb-6 rise-in">
         <div>
-          <h1 class="font-serif-ink text-2xl mb-1">智能体库</h1>
+          <h1 class="font-serif-tool text-2xl mb-1">智能体库</h1>
           <p class="text-[12.5px] text-[var(--text-faint)]">
-            描述你想要的智能体，AI 会替你创建；在这里决定它能碰哪些库、能不能上网，以及是否在妙笔启用
+            描述你想要的智能体，AI 会替你创建；在这里决定它能碰哪些库、能不能上网，以及是否在创作助手启用
           </p>
         </div>
-        <InkButton @click="openCreate"><Plus :size="14" /> AI 创建智能体</InkButton>
+        <ToolButton @click="openCreate"><Plus :size="14" /> AI 创建智能体</ToolButton>
       </div>
 
       <!-- 自定义智能体 -->
@@ -288,7 +288,7 @@ function scopeText(scope: string[]): string {
             <div class="text-[11px] text-[var(--text-faint)] mb-3">可读：{{ scopeText(a.readScope) }}{{ a.libsWrite ? ' · 可写入资源库' : '' }}</div>
             <div class="flex items-center justify-between">
               <span class="text-[11px]" :style="a.enabled ? { color: 'var(--accent)' } : { color: 'var(--text-faint)' }">
-                {{ a.enabled ? '已在妙笔启用' : '未启用' }}
+                {{ a.enabled ? '已在创作助手启用' : '未启用' }}
               </span>
               <button
                 class="relative w-9 h-5 rounded-full transition-colors cursor-pointer"
@@ -321,7 +321,7 @@ function scopeText(scope: string[]): string {
                 v-if="a.panel"
                 class="text-[10px] px-1.5 py-0.5 rounded-full"
                 :style="{ background: 'var(--panel-2)', color: 'var(--accent)' }"
-                title="通常由对应资料面板一键调用，妙笔选择列表里默认折叠"
+                title="通常由对应资料面板一键调用，创作助手选择列表里默认折叠"
               >资料区工具</span>
             </div>
             <div class="text-[12px] text-[var(--text-dim)] mb-2">{{ a.desc }}</div>
@@ -341,7 +341,7 @@ function scopeText(scope: string[]): string {
                 class="inline-flex items-center gap-1.5 text-[11.5px] px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors"
                 :class="app.config?.agentOrchestrator?.[a.id] ? 'bg-[var(--panel-2)]' : 'bg-[var(--bg-soft)] text-[var(--text-dim)] hover:text-[var(--text)]'"
                 :style="app.config?.agentOrchestrator?.[a.id] ? { color: 'var(--accent)' } : {}"
-                :title="app.config?.agentOrchestrator?.[a.id] ? '分配模式已开启，点击关闭' : '开启分配模式：它可在妙笔里把工作分配给其他智能体，每次分配需你确认'"
+                :title="app.config?.agentOrchestrator?.[a.id] ? '分配模式已开启，点击关闭' : '开启分配模式：它可在创作助手里把工作分配给其他智能体，每次分配需你确认'"
                 @click="toggleBuiltinOrch(a.id)"
               >
                 <Users :size="12" />
@@ -354,7 +354,7 @@ function scopeText(scope: string[]): string {
     </div>
 
     <!-- 创建 / 编辑弹层 -->
-    <InkModal :open="modalOpen" :title="editingId ? '编辑自定义智能体' : 'AI 创建智能体'" wide @close="closeModal">
+    <ToolModal :open="modalOpen" :title="editingId ? '编辑自定义智能体' : 'AI 创建智能体'" wide @close="closeModal">
       <!-- 第一步：需求描述 -->
       <div v-if="step === 1" class="space-y-3">
         <p class="text-[12.5px] text-[var(--text-dim)]">
@@ -362,20 +362,20 @@ function scopeText(scope: string[]): string {
         </p>
         <textarea
           v-model="needDesc"
-          class="ink-textarea h-28"
+          class="tool-textarea h-28"
           placeholder="例如：帮我考据古代背景的细节——服饰、饮食、官职、礼仪这些，我写到哪它查到哪，发现穿帮就指出来并给替换建议"
         />
         <p v-if="draftErr" class="text-[12.5px] text-[#e08a7a]">{{ draftErr }}</p>
-        <p v-if="drafting" class="ink-dots text-[12px]" style="color: var(--accent)">
+        <p v-if="drafting" class="tool-dots text-[12px]" style="color: var(--accent)">
           正在起草，模型响应通常需要 10~40 秒，请保持窗口打开
         </p>
         <div class="flex items-center gap-2 justify-end">
-          <InkButton variant="ghost" :disabled="drafting" @click="step = 2">跳过，手写定义</InkButton>
-          <InkButton :disabled="drafting || !needDesc.trim()" @click="draft">
+          <ToolButton variant="ghost" :disabled="drafting" @click="step = 2">跳过，手写定义</ToolButton>
+          <ToolButton :disabled="drafting || !needDesc.trim()" @click="draft">
             <LoaderCircle v-if="drafting" :size="14" class="animate-spin" />
             <Sparkles v-else :size="14" />
             {{ drafting ? '起草中…' : '让 AI 起草' }}
-          </InkButton>
+          </ToolButton>
         </div>
       </div>
 
@@ -384,16 +384,16 @@ function scopeText(scope: string[]): string {
         <div class="grid grid-cols-2 gap-3">
           <label class="text-[12px] text-[var(--text-dim)] block">
             名称
-            <input v-model="form.name" class="ink-input mt-1" placeholder="智能体名" />
+            <input v-model="form.name" class="tool-input mt-1" placeholder="智能体名" />
           </label>
           <label class="text-[12px] text-[var(--text-dim)] block">
             分类标签
-            <input v-model="form.stage" class="ink-input mt-1" placeholder="如：考据 / 文风" />
+            <input v-model="form.stage" class="tool-input mt-1" placeholder="如：考据 / 文风" />
           </label>
         </div>
         <label class="text-[12px] text-[var(--text-dim)] block">
           一句话职责
-          <input v-model="form.desc" class="ink-input mt-1" placeholder="显示在妙笔选择列表里" />
+          <input v-model="form.desc" class="tool-input mt-1" placeholder="显示在创作助手选择列表里" />
         </label>
 
         <div>
@@ -427,7 +427,7 @@ function scopeText(scope: string[]): string {
               {{ l.label }}
             </button>
             <span class="w-px h-4 bg-[var(--border)] mx-1" />
-            <InkToggle v-model="form.libsWrite" label="允许写入资源库" />
+            <ToolToggle v-model="form.libsWrite" label="允许写入资源库" />
           </div>
         </div>
 
@@ -464,29 +464,29 @@ function scopeText(scope: string[]): string {
           </template>
         </div>
 
-        <InkToggle v-model="form.webSearch" label="安装联网搜索（查现实资料 / 考据 / 市场）" />
+        <ToolToggle v-model="form.webSearch" label="安装联网搜索（查现实资料 / 考据 / 市场）" />
         <div class="space-y-1">
-          <InkToggle v-model="form.orchestrator" label="分配模式（可把工作分配给其他智能体执行）" />
-          <p class="text-[10.5px] text-[var(--text-faint)] leading-4">开启后它在妙笔里可作为主智能体指挥团队，每次分配都会先征求你同意。</p>
+          <ToolToggle v-model="form.orchestrator" label="分配模式（可把工作分配给其他智能体执行）" />
+          <p class="text-[10.5px] text-[var(--text-faint)] leading-4">开启后它在创作助手里可作为主智能体指挥团队，每次分配都会先征求你同意。</p>
         </div>
 
         <div>
           <div class="text-[12px] text-[var(--text-dim)] mb-1.5">欢迎语建议（最多 4 条，留空忽略）</div>
           <div class="grid grid-cols-2 gap-2">
-            <input v-for="(_, i) in form.welcome" :key="i" v-model="form.welcome[i]" class="ink-input h-8 py-0 text-[12.5px]" placeholder="建议提问" />
+            <input v-for="(_, i) in form.welcome" :key="i" v-model="form.welcome[i]" class="tool-input h-8 py-0 text-[12.5px]" placeholder="建议提问" />
           </div>
         </div>
 
         <label class="text-[12px] text-[var(--text-dim)] block">
           系统提示词（职责 / 工作方法 / 输出风格）
-          <textarea v-model="form.prompt" class="ink-textarea mt-1 h-52 font-mono text-[12.5px]" />
+          <textarea v-model="form.prompt" class="tool-textarea mt-1 h-52 font-mono text-[12.5px]" />
         </label>
 
         <div class="flex items-center gap-2 justify-end">
-          <InkButton v-if="!editingId" variant="ghost" @click="step = 1">返回修改需求</InkButton>
-          <InkButton :disabled="!form.name.trim() || !form.prompt.trim()" @click="saveForm">保存入库</InkButton>
+          <ToolButton v-if="!editingId" variant="ghost" @click="step = 1">返回修改需求</ToolButton>
+          <ToolButton :disabled="!form.name.trim() || !form.prompt.trim()" @click="saveForm">保存入库</ToolButton>
         </div>
       </div>
-    </InkModal>
+    </ToolModal>
   </div>
 </template>

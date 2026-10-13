@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import InkButton from '../ui/InkButton.vue'
-import InkSelect from '../ui/InkSelect.vue'
+import ToolButton from '../ui/ToolButton.vue'
+import ToolSelect from '../ui/ToolSelect.vue'
 import { aiRun } from '../ai'
-import { analyzeHumanSignal, type LexiconOverrides } from '../lib/human-signal'
+import { analyzeTextPatterns, type LexiconOverrides } from '../lib/text-check'
 import { deaiState as S } from '../lib/deaiState'
 
 const props = defineProps<{ chapterText: string; book: string; file: string }>()
@@ -41,8 +41,8 @@ watch(
   }
 )
 
-// ============ 人类信号密度（本地实时打分，不耗 token） ============
-const signal = computed(() => analyzeHumanSignal(props.chapterText || '', S.genre, lex.value))
+// ============ 文本统计（本地计算） ============
+const signal = computed(() => analyzeTextPatterns(props.chapterText || '', S.genre, lex.value))
 
 /** OOC 对照用的角色设定卡：诊断时自动注入（正文文体才读），按书缓存（无卡也缓存，避免重复读盘）；一人一档聚合读取 */
 async function loadCharacterCard() {
@@ -61,7 +61,7 @@ async function loadCharacterCard() {
 const MODES = [
   { k: 'diagnose', t: '诊断', id: 'deai-diagnose', target: 'report' as const },
   { k: 'rewrite', t: '改写', id: 'deai-rewrite', target: 'rewritten' as const },
-  { k: 'score', t: '评分', id: 'deai-score', target: 'report' as const }
+  { k: 'score', t: '审查建议', id: 'deai-score', target: 'report' as const }
 ]
 const DIMS = ['直接性', '节奏感', '信任度', '真实性', '精炼度']
 
@@ -93,7 +93,7 @@ async function run(promptId: string, target: 'report' | 'rewritten') {
   S.aborter = aborter
   try {
     const full = await aborter.promise
-    if (props.file === myFile && promptId === 'deai-score' && full) parseScores(full)
+    if (props.file === myFile && full && target === 'report') S.report = full
   } catch (e) {
     if (props.file === myFile) S.error = (e as Error).message
   } finally {
@@ -106,24 +106,6 @@ function stopRun() {
   S.aborter?.abort()
 }
 
-function parseScores(full: string) {
-  S.summary = ''
-  S.scores = null
-  const m = full.match(/\{[^{}]*\}/g)
-  const last = m?.[m.length - 1]
-  if (last) {
-    try {
-      const j = JSON.parse(last) as Record<string, number>
-      S.scores = j
-      S.summary = full.slice(0, full.lastIndexOf(last)).trim()
-      return
-    } catch {
-      /* fallthrough */
-    }
-  }
-  S.summary = full
-}
-
 function applyRewrite() {
   if (!S.rewritten.trim()) return
   emit('apply-text', S.rewritten.trim())
@@ -132,12 +114,11 @@ function applyRewrite() {
 
 <template>
   <div class="text-sm">
-    <!-- 人类信号密度（本地实时打分）：朱雀对抗自检 -->
+    <!-- 本地统计与待核查表达 -->
     <div class="rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] p-3 mb-3">
       <div class="flex items-center gap-2 mb-2 flex-wrap">
-        <span class="text-xs font-medium" :style="{ color: 'var(--accent)' }">人类信号密度</span>
-        <span class="text-[15px] font-bold" :style="{ color: signal.score >= 60 ? 'var(--accent)' : signal.score >= 35 ? '#e0a87a' : '#e08a7a' }">{{ signal.score }}</span>
-        <span class="text-[10px] text-[var(--text-faint)]">/100 · 自检指引，非朱雀代理</span>
+        <span class="text-xs font-medium" :style="{ color: 'var(--accent)' }">文本统计</span>
+        <span class="text-[10px] text-[var(--text-faint)]">用于定位待核查段落</span>
         <div class="flex-1" />
         <button
           class="text-[10.5px] text-[var(--text-faint)] hover:text-[var(--accent)] cursor-pointer"
@@ -162,22 +143,17 @@ function applyRewrite() {
         </div>
       </div>
       <div v-if="signal.stats.chars" class="space-y-1.5">
-        <div v-for="s in signal.subs" :key="s.key" class="flex items-center gap-2" :title="s.hint">
-          <span class="w-11 text-[11px] text-[var(--text-dim)] shrink-0">{{ s.label }}</span>
-          <div class="score-bar flex-1"><div :style="{ width: s.score * 100 + '%' }" /></div>
-          <span class="w-8 text-right text-[10px] text-[var(--text-faint)]">{{ Math.round(s.score * 100) }}</span>
-        </div>
         <div class="text-[10.5px] text-[var(--text-faint)] pt-0.5">
           {{ signal.stats.chars }} 字 · 均句长 {{ signal.stats.avgLen }} · 句长落差 CV {{ signal.stats.cv }}<template v-if="S.genre === 'fiction'"> · 对话占比 {{ Math.round(signal.stats.dialogueRatio * 100) }}%</template>
         </div>
         <div v-if="signal.warnings.length" class="space-y-1 pt-1 border-t border-[var(--border)]">
-          <div v-for="(w, i) in signal.warnings" :key="i" class="text-[11px] leading-4" :style="{ color: w.startsWith('【红牌】') ? '#e08a7a' : 'var(--text-dim)' }">{{ w }}</div>
+          <div v-for="(w, i) in signal.warnings" :key="i" class="text-[11px] leading-4" :style="{ color: w.startsWith('【待核查】') ? '#e08a7a' : 'var(--text-dim)' }">{{ w }}</div>
         </div>
       </div>
       <div v-else class="text-[11px] text-[var(--text-faint)]">章节无内容，写点什么再测</div>
     </div>
 
-    <!-- 模式分段选择 + 去味强度 -->
+    <!-- 模式分段选择 + 修订范围 -->
     <div class="flex items-center gap-2 flex-wrap mb-3">
       <div class="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-[var(--bg-soft)]">
         <button
@@ -192,7 +168,7 @@ function applyRewrite() {
           {{ m.t }}
         </button>
       </div>
-      <InkSelect
+      <ToolSelect
         v-model="S.level"
         class="w-auto ml-auto"
         :disabled="S.running"
@@ -206,33 +182,23 @@ function applyRewrite() {
     </div>
 
     <div v-if="S.running" class="flex items-center gap-3 py-2">
-      <div class="ink-dots"><span /><span /><span /></div>
-      <InkButton variant="ghost" class="ml-auto" :disabled="!S.aborter" @click="stopRun">停止</InkButton>
+      <div class="tool-dots"><span /><span /><span /></div>
+      <ToolButton variant="ghost" class="ml-auto" :disabled="!S.aborter" @click="stopRun">停止</ToolButton>
     </div>
     <div v-if="S.error" class="text-[12.5px] text-[#e08a7a]">{{ S.error }}</div>
 
     <!-- 诊断 / 评分报告 -->
     <div v-if="S.report" class="rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] p-3 text-[13px] leading-6 whitespace-pre-wrap max-h-72 overflow-y-auto">{{ S.report }}</div>
 
-    <!-- 5 维评分卡 -->
-    <div v-if="S.scores" class="rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] p-3 space-y-2">
-      <div class="text-xs text-[var(--text-faint)]">五维质量评分（总分 {{ S.scores['总分'] ?? '-' }}/50）</div>
-      <div v-for="d in DIMS" :key="d" class="flex items-center gap-2">
-        <span class="w-12 text-xs text-[var(--text-dim)]">{{ d }}</span>
-        <div class="score-bar flex-1"><div :style="{ width: ((S.scores[d] || 0) / 10) * 100 + '%' }" /></div>
-        <span class="text-xs w-8 text-right">{{ S.scores[d] ?? '-' }}</span>
-      </div>
-    </div>
-
     <!-- 改写结果 -->
     <template v-if="S.rewritten">
       <div>
         <div class="text-xs text-[var(--text-faint)] mb-1">改写结果（可直接修改）</div>
-        <textarea v-model="S.rewritten" class="ink-textarea h-64 text-[15px] leading-8" />
+        <textarea v-model="S.rewritten" class="tool-textarea h-64 text-[15px] leading-8" />
       </div>
       <div class="flex justify-end gap-2">
-        <InkButton variant="ghost" @click="S.rewritten = ''">放弃</InkButton>
-        <InkButton @click="applyRewrite">应用为整章内容</InkButton>
+        <ToolButton variant="ghost" @click="S.rewritten = ''">放弃</ToolButton>
+        <ToolButton @click="applyRewrite">应用为整章内容</ToolButton>
       </div>
     </template>
   </div>
