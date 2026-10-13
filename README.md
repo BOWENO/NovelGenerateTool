@@ -2,6 +2,8 @@
 
 本地小说创作桌面工具，版本0.1.0。支持书架、编辑器、分卷与章节规划、人物和设定资料、写作助手、拆书、定向修订和历史恢复。
 
+源码仓库：[BOWENO/NovelGenerateTool](https://github.com/BOWENO/NovelGenerateTool)。
+
 新章先成为草稿。审查建议与作者采用分别记录，采用后核对正文版本并交接资料，再生成下一章。关闭应用后可以恢复待审稿；草稿修改后需更新审查建议。
 
 ## 启动与构建
@@ -51,4 +53,4 @@ Linux命令生成 `release/linux-unpacked/`，运行其中的 `novelgeneratetool
 
 Linux隔离桌面验证可运行 `node scripts/smoke.cjs`，需要Xvfb和已构建的Linux包。输出目录可用 `NOVELGENERATETOOL_SMOKE_OUTPUT` 指定；默认使用临时目录，测试不会连接真实模型。
 
-源码来源与许可声明见 [NOTICE.md](NOTICE.md)。此版本未连接远程更新服务，也未公开发布。构建、程序检查和模拟请求不能证明小说质量、完整长篇一致性或商业效果。
+源码来源与许可声明见 [NOTICE.md](NOTICE.md)。此版本未连接远程更新服务。构建、程序检查和模拟请求不能证明小说质量、完整长篇一致性或商业效果。
